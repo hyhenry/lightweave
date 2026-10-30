@@ -2,7 +2,7 @@
 # `version` goes up; `npm run release <version>` sets it (with package.json) and
 # the GitHub "Publish" workflow builds the image for that version.
 name: Lightweave
-version: "0.2.1"
+version: "0.2.2"
 slug: lightweave
 description: Holiday themes, custom patterns and schedules for your WLED lights
 url: https://github.com/hyhenry/lightweave
