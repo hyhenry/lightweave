@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   test:
-    name: Typecheck, test and build
+    name: Typecheck, build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -19,5 +19,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - run: npm test # builds the web app first (pretest)

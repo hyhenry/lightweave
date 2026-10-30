@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { autopilotPattern, dueEvents, isRunning, nextEvents, runsOn, windowsAround } from '../../shared/schedule.ts';
 import { BUILT_IN_THEMES } from '../../shared/themes.ts';
+import { sunTime } from '../../shared/sun.ts';
 import type { Schedule } from '../../shared/types.ts';
 
 const EDMONTON = { location: { name: 'Edmonton, AB', lat: 53.55, lon: -113.49 } };
@@ -26,9 +27,14 @@ test('an off time earlier than the on time ends the next morning', () => {
 
 test('sunset triggers use the location and offset', () => {
   const s: Schedule = { ...base, on: { kind: 'sunset', offset: -15 } };
-  const { on } = nextEvents(s, new Date(2026, 11, 21, 9), EDMONTON);
-  assert.equal(on!.getHours(), 16);
-  assert.ok(Math.abs(on!.getMinutes() - 1) <= 4, `~4:01 p.m., got ${on!.toTimeString()}`);
+  const day = new Date(2026, 11, 21, 9);
+  const { on } = nextEvents(s, day, EDMONTON);
+  // Compare moments, not clock hours: the local hour depends on time-zone law
+  // (Alberta moved to permanent UTC−6 in 2026; older tz data still says UTC−7).
+  const sunset = sunTime(day, EDMONTON.location.lat, EDMONTON.location.lon, 'sunset')!;
+  assert.equal(on!.getTime(), sunset.getTime() - 15 * 60_000);
+  const utcMinutes = on!.getUTCHours() * 60 + on!.getUTCMinutes();
+  assert.ok(Math.abs(utcMinutes - (23 * 60 + 1)) <= 4, `~23:01 UTC, got ${on!.toISOString()}`);
   assert.equal(nextEvents(s, new Date(), {}).on, undefined, 'no location, no sunset');
 });
 

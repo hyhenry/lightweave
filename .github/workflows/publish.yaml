@@ -1,7 +1,8 @@
 # Builds the Lightweave image for Raspberry Pi (aarch64) and PCs (amd64) and
 # publishes it to GitHub's container registry, tagged with the version from
 # homeassistant/lightweave/config.yaml. Runs when that version changes
-# (`npm run release <version>`, then push). Home Assistant then offers the update.
+# (`npm run release <version>`, then push), when this workflow changes, or by hand
+# (Actions → Publish → Run workflow). Home Assistant then offers the update.
 #
 # Based on Home Assistant's example app repository (home-assistant/apps-example).
 
@@ -10,7 +11,7 @@ name: Publish
 on:
   push:
     branches: [main]
-    paths: [homeassistant/lightweave/config.yaml]
+    paths: [homeassistant/lightweave/config.yaml, .github/workflows/publish.yaml]
   workflow_dispatch:
 
 permissions:

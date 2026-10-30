@@ -15,6 +15,7 @@
     "start": "node server/index.ts",
     "mock": "node scripts/mock-wled.ts",
     "typecheck": "tsc --noEmit",
+    "pretest": "vite build --logLevel warn",
     "test": "TZ=America/Edmonton node --test --test-concurrency=4 \"test/**/*.test.ts\"",
     "build:ha": "node scripts/build-ha-app.ts",
     "release": "node scripts/release.ts"
