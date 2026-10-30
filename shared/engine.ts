@@ -2,6 +2,7 @@
 // server's light output produce exactly the same frames.
 
 import type { ColorBlock, Pattern } from './types.ts';
+import { soundEffect, type SoundPreview } from './sound.ts';
 
 export type RGB = [number, number, number];
 
@@ -30,6 +31,11 @@ function hash(a: number, b: number): number {
 /** True when the pattern never changes over time, so it can be sent once instead of streamed. */
 export function isStatic(p: Pattern): boolean {
   return p.animation === 'static';
+}
+
+/** Sound patterns run as WLED's own effect, since only the controller can hear the music. */
+export function isWledEffect(p: Pattern): boolean {
+  return p.animation === 'sound';
 }
 
 interface Layout {
@@ -147,6 +153,10 @@ export function render(
         c = scale(colorAt(l, i, p.blend), 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(phase)));
         break;
       }
+      case 'sound': {
+        c = soundPixel(soundEffect(p.sound).preview, l, i, ledCount, t);
+        break;
+      }
       case 'colorCycle': {
         // Whole strip fades through the pattern's colors, one at a time.
         const n = l.colors.length;
@@ -168,6 +178,100 @@ export function render(
     out[o + 2] = Math.round(c[2] * bri);
   }
   return out;
+}
+
+// ---- Sound preview -------------------------------------------------------
+// The app can't hear the room, so previews dance to a made-up ~120bpm beat.
+
+function soundLevel(t: number): number {
+  const beat = t * 2;
+  const k = Math.floor(beat);
+  const hit = 0.55 + 0.45 * hash(k, 99);
+  const env = Math.exp(-(beat - k) * 4) * hit;
+  const wobble = 0.15 * (0.5 + 0.5 * Math.sin(t * 7.3)) * (0.5 + 0.5 * Math.sin(t * 2.1));
+  return Math.min(1, env * 0.85 + wobble);
+}
+
+/** Smooth gradient through the pattern's first three colors, x in 0..1. */
+function gradient(l: Layout, x: number): RGB {
+  const cols = l.colors.slice(0, 3);
+  if (cols.length === 1) return cols[0];
+  const pos = Math.max(0, Math.min(1, x)) * (cols.length - 1);
+  const k = Math.min(cols.length - 2, Math.floor(pos));
+  return mix(cols[k], cols[k + 1], pos - k);
+}
+
+function hsv(h: number, s = 1, v = 1): RGB {
+  const f = (n: number) => {
+    const k = (n + h * 6) % 6;
+    return v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  return [f(5) * 255, f(3) * 255, f(1) * 255];
+}
+
+function soundPixel(style: SoundPreview, l: Layout, i: number, n: number, t: number): RGB {
+  const level = soundLevel(t);
+  const x = i / Math.max(1, n - 1);
+  const d = Math.abs(i - (n - 1) / 2) / Math.max(1, (n - 1) / 2); // 0 at center, 1 at ends
+  const off: RGB = [0, 0, 0];
+  switch (style) {
+    case 'meter': {
+      const peak = Math.max(level, soundLevel(t - 0.3) * 0.9, soundLevel(t - 0.6) * 0.8);
+      if (Math.abs(x - peak) < 1.2 / n) return [255, 255, 255];
+      return x <= level ? gradient(l, x) : off;
+    }
+    case 'centerMeter': {
+      const peak = Math.max(level, soundLevel(t - 0.3) * 0.9, soundLevel(t - 0.6) * 0.8);
+      if (Math.abs(d - peak) < 2 / n) return gradient(l, 1);
+      return d <= level ? gradient(l, d) : off;
+    }
+    case 'pulse': {
+      // Each LED shows the level from a moment ago, so beats travel outward.
+      return scale(gradient(l, d), soundLevel(t - d * 0.6) ** 1.5);
+    }
+    case 'glow':
+      return scale(gradient(l, d), Math.max(0, Math.min(1, (level * 1.2 - d) * 3)));
+    case 'splash': {
+      let out = off;
+      const beat = t * 2;
+      for (let k = Math.floor(beat) - 2; k <= Math.floor(beat); k++) {
+        const age = beat - k;
+        const center = hash(k, 1) * n;
+        const width = 2 + hash(k, 3) * 5 + age * 3;
+        if (Math.abs(i - center) < width) out = scale(gradient(l, hash(k, 2)), Math.exp(-age * 1.6) * (0.5 + 0.5 * hash(k, 99)));
+      }
+      return out;
+    }
+    case 'confetti': {
+      const slot = Math.floor(t * 9);
+      let out = off;
+      for (let k = slot - 4; k <= slot; k++) {
+        const pos = hash(k, 5) * n;
+        const dist = Math.abs(i - pos);
+        if (dist < 2.5) out = scale(gradient(l, hash(k, 6)), (1 - dist / 2.5) * Math.exp(-(t * 9 - k) * 0.6) * (0.3 + soundLevel(k / 9)));
+      }
+      return out;
+    }
+    case 'juggle': {
+      let best = 0;
+      let col = off;
+      for (let k = 0; k < 4; k++) {
+        const pos = (0.5 + 0.5 * Math.sin(t * (0.7 + k * 0.23) + k * 1.7)) * (n - 1);
+        const b = Math.max(0, 1 - Math.abs(i - pos) / 3) * (0.35 + 0.65 * level);
+        if (b > best) {
+          best = b;
+          col = scale(gradient(l, k / 3), b);
+        }
+      }
+      return col;
+    }
+    case 'rainbow':
+      return scale(hsv((d * 0.5 + t * 0.08) % 1), Math.max(0.05, soundLevel(t - d * 0.4)));
+    case 'fire': {
+      const heat = Math.max(0, Math.min(1, level * 1.3 - x * 0.7 + (hash(i, Math.floor(t * 12)) - 0.5) * 0.3));
+      return heat < 0.33 ? scale([255, 0, 0], heat * 3) : heat < 0.66 ? mix([255, 0, 0], [255, 120, 0], (heat - 0.33) * 3) : mix([255, 120, 0], [255, 220, 80], (heat - 0.66) * 3);
+    }
+  }
 }
 
 /**

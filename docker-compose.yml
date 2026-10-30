@@ -9,6 +9,6 @@ services:
     volumes:
       - ./data:/data
     environment:
-      - TZ=America/New_York
+      - TZ=America/Edmonton # schedules run on this time zone
     # Bridge networking is fine: add your lights by IP address.
     # (".local" mDNS names don't resolve inside this Alpine image.)

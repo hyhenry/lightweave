@@ -10,6 +10,8 @@ RUN npm run build
 FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production PORT=8787 DATA_DIR=/data
+# Time zone data so schedules run on local time (set TZ, e.g. America/Edmonton)
+RUN apk add --no-cache tzdata
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY shared ./shared

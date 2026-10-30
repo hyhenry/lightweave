@@ -33,29 +33,54 @@ const C = {
 
 type Spec = [name: string, blocks: [string, number][], animation?: Animation, speed?: number, extra?: Partial<Pattern>];
 
-function group(category: string, specs: Spec[]): Pattern[] {
+/** `idPrefix` keeps theme IDs (and so favorites) stable if a category is renamed. */
+function group(category: string, specs: Spec[], idPrefix = category): Pattern[] {
   return specs.map(([name, blocks, animation = 'static', speed = 4, extra = {}]) => ({
-    id: `builtin-${category}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    id: `builtin-${idPrefix}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     name,
     category,
     blocks: blocks.map(([color, count]) => ({ color, count })),
     animation,
     speed,
     direction: 'forward',
-    brightness: 80,
+    brightness: 100,
     blend: false,
     builtIn: true,
     ...extra,
   }));
 }
 
+/** Themes for any time of year, no holiday needed. */
+export const ANYTIME = 'Everyday & Celebrations';
+
 export const BUILT_IN_THEMES: Pattern[] = [
-  ...group('Everyday', [
+  ...group(ANYTIME, [
     ['Warm White', [[C.warm, 1]]],
     ['Soft Glow', [[C.softWarm, 1]], 'static', 4, { brightness: 45 }],
     ['Bright White', [[C.cool, 1]]],
     ['Gold Accent', [[C.warm, 3], [C.off, 2]]],
     ['Rainbow Drift', [[C.red, 4], [C.orange, 4], [C.butter, 4], [C.green, 4], [C.sky, 4], [C.purple, 4]], 'chase', 3, { blend: true }],
+  ], 'Everyday'),
+  ...group(ANYTIME, [
+    ['Birthday Party', [[C.hotPink, 2], [C.butter, 2], [C.sky, 2], [C.lime, 2]], 'marquee', 6],
+    ['Pride', [[C.red, 3], [C.orange, 3], [C.butter, 3], [C.green, 3], [C.royal, 3], [C.violet, 3]], 'chase', 3],
+    ['Under the Sea', [[C.teal, 3], [C.blue, 3], [C.sky, 2]], 'wave', 2, { blend: true }],
+    ['Game Day', [[C.royal, 3], [C.gold, 3]], 'chase', 6],
+  ], 'Celebrations'),
+  ...group('Sound Reactive', [
+    ['Party Meter', [[C.green, 1], [C.butter, 1], [C.red, 1]], 'sound', 5, { sound: 'volumeMeter' }],
+    ['Bounce to the Beat', [[C.hotPink, 1], [C.violet, 1], [C.sky, 1]], 'sound', 5, { sound: 'bounceMeter' }],
+    ['Neon Pulse', [[C.hotPink, 1], [C.sky, 1], [C.violet, 1]], 'sound', 5, { sound: 'pulseWave' }],
+    ['Warm Glow Beat', [[C.warm, 1], [C.amber, 1], [C.orange, 1]], 'sound', 4, { sound: 'centerGlow' }],
+    ['Ocean Ripples', [[C.teal, 1], [C.blue, 1], [C.sky, 1]], 'sound', 4, { sound: 'ripples' }],
+    ['Confetti Party', [[C.hotPink, 1], [C.butter, 1], [C.sky, 1]], 'sound', 6, { sound: 'confetti' }],
+    ['Juggling Lights', [[C.red, 1], [C.green, 1], [C.royal, 1]], 'sound', 5, { sound: 'juggle' }],
+    ['Monster Splash', [[C.orange, 1], [C.purple, 1], [C.lime, 1]], 'sound', 5, { sound: 'splash' }],
+    ['Jingle Bounce', [[C.red, 1], [C.white, 1], [C.green, 1]], 'sound', 5, { sound: 'bounceMeter' }],
+    ['Canada Beat', [[C.red, 1], [C.white, 1]], 'sound', 5, { sound: 'volumeMeter' }],
+    ['Music Rainbow', [[C.red, 1]], 'sound', 5, { sound: 'musicRainbow' }],
+    ['DJ Light', [[C.red, 1]], 'sound', 6, { sound: 'djLight' }],
+    ['Sound Fire', [[C.orange, 1]], 'sound', 5, { sound: 'soundFire' }],
   ]),
   ...group('Halloween', [
     ['Pumpkin Patch', [[C.orange, 3], [C.purple, 3]]],
@@ -162,11 +187,5 @@ export const BUILT_IN_THEMES: Pattern[] = [
     ['Cornucopia', [[C.amber, 2], [C.deepRed, 1], [C.gold, 2], [C.deepGreen, 1]]],
     ['Cranberry', [[C.deepRed, 3], [C.warm, 1]]],
     ['Cozy Hearth', [[C.warm, 2], [C.amber, 1]], 'twinkle', 2],
-  ]),
-  ...group('Celebrations', [
-    ['Birthday Party', [[C.hotPink, 2], [C.butter, 2], [C.sky, 2], [C.lime, 2]], 'marquee', 6],
-    ['Pride', [[C.red, 3], [C.orange, 3], [C.butter, 3], [C.green, 3], [C.royal, 3], [C.violet, 3]], 'chase', 3],
-    ['Under the Sea', [[C.teal, 3], [C.blue, 3], [C.sky, 2]], 'wave', 2, { blend: true }],
-    ['Game Day', [[C.royal, 3], [C.gold, 3]], 'chase', 6],
   ]),
 ];

@@ -1,0 +1,2 @@
+network:
+  8787/tcp: Direct web access (not needed inside Home Assistant)

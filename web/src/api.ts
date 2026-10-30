@@ -1,10 +1,12 @@
-import type { Device, DeviceStatus, Pattern } from '../../shared/types.ts';
+import type { Device, DeviceStatus, Pattern, Schedule, Settings } from '../../shared/types.ts';
 
 export type DeviceWithStatus = Device & { status: DeviceStatus };
+export type ScheduleWithNext = Schedule & { next: { on?: string; off?: string }; showing?: string };
 type Result = { deviceId: string; ok: boolean; error?: string };
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  // Relative (no leading slash) so it works under Home Assistant's Ingress path too.
+  const res = await fetch(`api${path}`, {
     method,
     headers: body ? { 'content-type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
@@ -26,9 +28,18 @@ export const api = {
   addDevice: (d: Partial<Device>) => call<Device>('POST', '/devices', d),
   updateDevice: (id: string, d: Partial<Device>) => call<Device>('PUT', `/devices/${id}`, d),
   deleteDevice: (id: string) => call('DELETE', `/devices/${id}`),
+  setAudioSource: (id: string, sourceId: string | null) => call<{ audio: string }>('PUT', `/devices/${id}/audio`, { sourceId }),
 
   play: (body: { patternId?: string; pattern?: Pattern; deviceIds?: string[] }) =>
     call<{ results: Result[] }>('POST', '/play', body),
   power: (on: boolean, deviceIds?: string[]) => call<{ results: Result[] }>('POST', '/power', { on, deviceIds }),
+  brightness: (brightness: number, deviceIds?: string[]) => call('POST', '/brightness', { brightness, deviceIds }),
+  schedules: () => call<{ schedules: ScheduleWithNext[]; settings: Settings; timeZone: string }>('GET', '/schedules'),
+  createSchedule: (s: Partial<Schedule>) => call<ScheduleWithNext>('POST', '/schedules', s),
+  updateSchedule: (id: string, s: Partial<Schedule>) => call<ScheduleWithNext>('PUT', `/schedules/${id}`, s),
+  deleteSchedule: (id: string) => call('DELETE', `/schedules/${id}`),
+  setLocation: (location: Settings['location'] | null) => call<Settings>('PUT', '/settings', { location }),
+  info: () => call<{ homeAssistant: boolean }>('GET', '/info'),
+  homeAssistantWled: () => call<{ devices: { name: string; host: string; added: boolean }[] }>('GET', '/homeassistant/wled'),
   release: (deviceIds?: string[]) => call('POST', '/release', { deviceIds }),
 };

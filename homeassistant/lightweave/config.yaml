@@ -1,0 +1,25 @@
+# Home Assistant app definition. Home Assistant offers an update whenever
+# `version` goes up; `npm run release <version>` sets it (with package.json) and
+# the GitHub "Publish" workflow builds the image for that version.
+name: Lightweave
+version: "0.2.0"
+slug: lightweave
+description: Holiday themes, custom patterns and schedules for your WLED lights
+url: https://github.com/OWNER/lightweave
+# Prebuilt by GitHub Actions from the repository's Dockerfile (Raspberry Pi and PC).
+image: ghcr.io/OWNER/lightweave
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+# Opens inside Home Assistant (sidebar + Companion app), behind HA's login.
+ingress: true
+ingress_port: 8787
+panel_icon: mdi:string-lights
+panel_title: Lightweave
+# Read the WLED controllers and home location Home Assistant already has.
+homeassistant_api: true
+# Optional direct access (e.g. for a phone home-screen shortcut). Off by default.
+ports:
+  8787/tcp: null

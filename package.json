@@ -1,6 +1,6 @@
 {
   "name": "lightweave",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A friendly pattern and theme companion for WLED lights",
@@ -14,7 +14,10 @@
     "build": "vite build",
     "start": "node server/index.ts",
     "mock": "node scripts/mock-wled.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "TZ=America/Edmonton node --test --test-concurrency=4 \"test/**/*.test.ts\"",
+    "build:ha": "node scripts/build-ha-app.ts",
+    "release": "node scripts/release.ts"
   },
   "dependencies": {
     "@fastify/static": "^10.1.8",

@@ -1,5 +1,7 @@
 // Core data model shared by the server and the web app.
 
+import type { SoundEffectId } from './sound.ts';
+
 /** One run of a single color, e.g. "3 red lights". */
 export interface ColorBlock {
   color: string; // "#rrggbb"; "#000000" means lights off (a gap)
@@ -15,6 +17,7 @@ export const ANIMATIONS = [
   'wave',
   'colorCycle',
   'marquee',
+  'sound',
 ] as const;
 export type Animation = (typeof ANIMATIONS)[number];
 
@@ -26,8 +29,9 @@ export interface Pattern {
   animation: Animation;
   speed: number; // 1 (slow) .. 10 (fast)
   direction: 'forward' | 'reverse';
-  brightness: number; // 1..100 (%)
+  brightness: number; // 1..100 (%), relative to the controller's brightness
   blend: boolean; // smooth gradients between blocks instead of hard edges
+  sound?: SoundEffectId; // which WLED sound effect, when animation is 'sound'
   builtIn?: boolean; // shipped theme; edits are saved as a copy
   createdAt?: number;
   updatedAt?: number;
@@ -39,11 +43,39 @@ export interface Device {
   host: string; // "192.168.1.50" or "192.168.1.50:8080" (HTTP port); DDP always goes to port 4048
   ledCount: number;
   reverse: boolean; // flip direction (e.g. strip wired from the other end)
+  brightness?: number; // 1..100 (%), set from "Now showing"; kept when patterns change
+  audioSource?: string; // device this one gets sound from (UDP Sound Sync)
 }
+
+export type AudioMode = 'mic' | 'receiving' | 'capable' | 'none';
 
 export interface DeviceStatus {
   online: boolean;
-  playing?: { patternId: string; patternName: string; mode: 'static' | 'stream' };
+  playing?: { patternId: string; patternName: string; mode: 'static' | 'stream' | 'wled'; pattern: Pattern };
+  /**
+   * Sound reactivity: 'mic' has its own microphone, 'receiving' gets sound from another WLED,
+   * 'capable' could receive but isn't set up, 'none' has no AudioReactive at all.
+   */
+  audio?: AudioMode;
   power?: boolean;
   error?: string;
+}
+
+/** When a schedule turns lights on or off. Offsets are minutes (negative = before). */
+export type Trigger = { kind: 'time'; time: string } | { kind: 'sunset' | 'sunrise'; offset: number };
+
+export interface Schedule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  patternId: string; // a pattern id, 'autopilot' for the upcoming holiday's theme, or 'last' for each light's last pattern
+  deviceIds: string[]; // empty = all lights
+  on: Trigger;
+  off?: Trigger; // leave on when missing
+  days: number[]; // 0 = Sunday … 6 = Saturday
+  season?: { from: [number, number]; to: [number, number] }; // [month 1-12, day]; may wrap past New Year
+}
+
+export interface Settings {
+  location?: { name: string; lat: number; lon: number };
 }

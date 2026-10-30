@@ -1,0 +1,4 @@
+# Lets Home Assistant add this repository (Settings → Apps → Repositories).
+# The app itself is in homeassistant/lightweave/. `npm run release` fills in the URL.
+name: Lightweave
+url: https://github.com/OWNER/lightweave

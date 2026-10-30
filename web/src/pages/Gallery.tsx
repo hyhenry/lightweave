@@ -1,82 +1,58 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { Pattern } from '../../../shared/types.ts';
 import { StripPreview } from '../components/StripPreview.tsx';
-import { ANIMATION_INFO } from './Editor.tsx';
-import { daysUntil, nextOccurrence, sortCategories } from '../../../shared/holidays.ts';
+import { PatternCard } from '../components/PatternCard.tsx';
+import { groupCategories } from '../lib/gallery.ts';
+import { holidayWhenLabel } from '../lib/format.ts';
 
 interface Props {
   patterns: Pattern[];
-  favorites: string[];
+  favoriteIds: Set<string>;
   playingIds: Set<string>;
   onOpen: (p: Pattern) => void;
-  empty?: React.ReactNode;
+  empty?: ReactNode;
   showFilters?: boolean;
 }
 
-const FAVORITES = '★ Favorites';
-const SOON_DAYS = 60;
-
-/** "Today", "Tomorrow", "in 12 days" or "Feb 14" for a holiday section. */
-function whenLabel(category: string): string | undefined {
-  const days = daysUntil(category);
-  if (days === undefined) return undefined;
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Tomorrow';
-  if (days <= 45) return `in ${days} days`;
-  return nextOccurrence(category)!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+interface Section {
+  title: string;
+  list: Pattern[];
+  collapsible: boolean;
 }
 
-export function Gallery({ patterns, favorites, playingIds, onOpen, empty, showFilters = true }: Props) {
-  const [filter, setFilter] = useState<string>('All');
+/** Themes grouped by category: holidays coming up, any time of year, then later holidays (collapsed). */
+export function Gallery({ patterns, favoriteIds, playingIds, onOpen, empty, showFilters = true }: Props) {
+  const [filter, setFilter] = useState('All');
   const [query, setQuery] = useState('');
-
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Three groups: holidays in the next ~2 months, themes for any time of year,
-  // then the rest of the holidays in date order (collapsed to keep the page short).
-  const { soon, anytime, later } = useMemo(() => {
-    const cats = [...new Set(patterns.map((p) => p.category))];
-    const holidays = sortCategories(cats.filter((c) => daysUntil(c) !== undefined));
-    let soon = holidays.filter((c) => daysUntil(c)! <= SOON_DAYS);
-    if (!soon.length) soon = holidays.slice(0, 1);
-    return {
-      soon,
-      anytime: cats.filter((c) => daysUntil(c) === undefined),
-      later: holidays.filter((c) => !soon.includes(c)),
-    };
-  }, [patterns]);
+  const { soon, anytime, later } = useMemo(() => groupCategories([...new Set(patterns.map((p) => p.category))]), [patterns]);
 
   const q = query.trim().toLowerCase();
   const matches = (p: Pattern) => !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
-  const favs = favorites.map((id) => patterns.find((p) => p.id === id)).filter((p): p is Pattern => !!p && matches(p));
+  const browsing = !q && filter === 'All';
 
-  type Section = { title: string; list: Pattern[]; collapsible?: boolean };
-  const groups: { label?: string; sections: Section[] }[] = [];
-  /** Sections for these categories; 'allButFirst' keeps just the nearest holiday expanded. */
-  const build = (cats: string[], collapse: 'none' | 'all' | 'allButFirst' = 'none') =>
+  /** 'allButFirst' keeps just the nearest holiday open. */
+  const sections = (cats: string[], collapse: 'none' | 'all' | 'allButFirst'): Section[] =>
     cats
       .filter((c) => filter === 'All' || filter === c)
       .map((c, i) => ({
         title: c,
         list: patterns.filter((p) => p.category === c && matches(p)),
-        collapsible: !q && filter === 'All' && (collapse === 'all' || (collapse === 'allButFirst' && i > 0)),
+        collapsible: browsing && (collapse === 'all' || (collapse === 'allButFirst' && i > 0)),
       }))
       .filter((s) => s.list.length);
-  if ((filter === 'All' || filter === FAVORITES) && favs.length) groups.push({ sections: [{ title: FAVORITES, list: favs }] });
-  if (filter !== FAVORITES) {
-    groups.push({ label: 'Coming up', sections: build(soon, 'allButFirst') });
-    groups.push({ label: 'Anytime', sections: build(anytime) });
-    groups.push({ label: 'Later this year', sections: build(later, 'all') });
-  }
-  const showLabels = showFilters && filter === 'All';
-  const visible = groups.filter((g) => g.sections.length);
-  const chips = ['All', ...(favorites.length ? [FAVORITES] : []), ...anytime, ...soon, ...later];
+
+  const groups = [
+    { label: 'Coming up', sections: sections(soon, 'allButFirst') },
+    { label: 'Anytime', sections: sections(anytime, 'none') },
+    { label: 'Later this year', sections: sections(later, 'all') },
+  ].filter((g) => g.sections.length);
 
   const toggle = (title: string) =>
     setExpanded((x) => {
       const next = new Set(x);
-      if (next.has(title)) next.delete(title);
-      else next.add(title);
+      if (!next.delete(title)) next.add(title);
       return next;
     });
 
@@ -88,7 +64,7 @@ export function Gallery({ patterns, favorites, playingIds, onOpen, empty, showFi
         <div className="filters">
           <input className="input search" type="search" placeholder="Search themes" value={query} onChange={(e) => setQuery(e.target.value)} />
           <div className="chips" role="tablist">
-            {chips.map((c) => (
+            {['All', ...anytime, ...soon, ...later].map((c) => (
               <button key={c} role="tab" aria-selected={filter === c} className={`chip ${filter === c ? 'selected' : ''}`} onClick={() => setFilter(c)}>
                 {c}
               </button>
@@ -96,23 +72,23 @@ export function Gallery({ patterns, favorites, playingIds, onOpen, empty, showFi
           </div>
         </div>
       )}
-      {visible.map((g, gi) => (
-        <div key={g.label ?? gi} className="gallery-group">
-          {showLabels && g.label && <h2 className="group-label">{g.label}</h2>}
-          {g.sections.map(({ title, list, collapsible }) => {
-            const open = !collapsible || expanded.has(title);
-            const when = whenLabel(title);
+      {groups.map((g) => (
+        <div key={g.label} className="gallery-group">
+          {showFilters && filter === 'All' && <h2 className="group-label">{g.label}</h2>}
+          {g.sections.map((s) => {
+            const open = !s.collapsible || expanded.has(s.title);
+            const when = holidayWhenLabel(s.title);
             return (
-              <section key={title} className="gallery-section">
-                {collapsible ? (
-                  <button className="section-toggle" aria-expanded={open} onClick={() => toggle(title)}>
+              <section key={s.title} className="gallery-section">
+                {s.collapsible ? (
+                  <button className="section-toggle" aria-expanded={open} onClick={() => toggle(s.title)}>
                     <span className="section-toggle-text">
-                      <strong>{title}</strong>
+                      <strong>{s.title}</strong>
                       <small>
-                        {when} · {list.length} themes
+                        {when} · {s.list.length} themes
                       </small>
                     </span>
-                    <StripPreview pattern={list[0]} className="strip-mini" />
+                    <StripPreview pattern={s.list[0]} className="strip-mini" />
                     <span className="chevron" aria-hidden>
                       {open ? '▾' : '▸'}
                     </span>
@@ -120,23 +96,15 @@ export function Gallery({ patterns, favorites, playingIds, onOpen, empty, showFi
                 ) : (
                   showFilters && (
                     <h3 className="section-title">
-                      {title}
+                      {s.title}
                       {when && <span className="section-when">{when}</span>}
                     </h3>
                   )
                 )}
                 {open && (
                   <div className="cards">
-                    {list.map((p) => (
-                      <button key={p.id} className={`card ${playingIds.has(p.id) ? 'playing' : ''}`} onClick={() => onOpen(p)}>
-                        <StripPreview pattern={p} />
-                        <span className="card-meta">
-                          <span className="card-name">{p.name}</span>
-                          <span className="card-sub">
-                            {playingIds.has(p.id) ? <span className="live-dot">On now</span> : ANIMATION_INFO[p.animation].label}
-                          </span>
-                        </span>
-                      </button>
+                    {s.list.map((p) => (
+                      <PatternCard key={p.id} pattern={p} playing={playingIds.has(p.id)} favorite={favoriteIds.has(p.id)} onOpen={onOpen} />
                     ))}
                   </div>
                 )}
@@ -145,7 +113,7 @@ export function Gallery({ patterns, favorites, playingIds, onOpen, empty, showFi
           })}
         </div>
       ))}
-      {!visible.length && <p className="hint center pad">Nothing matches “{query}”.</p>}
+      {!groups.length && <p className="hint center pad">Nothing matches “{query}”.</p>}
     </div>
   );
 }
