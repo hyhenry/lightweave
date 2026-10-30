@@ -2,6 +2,25 @@
 
 A phone-friendly companion app for [WLED](https://kno.wled.ge) exterior lights. It brings back the parts of apps like Gemstone that WLED lacks: a library of holiday themes, and a simple editor for building your own patterns ("3 orange, 2 purple, 1 off, repeat") with motion like chase, twinkle and breathe.
 
+## Why I built this
+
+I built this app for my wife after I switched my Gemstone controller over to WLED. Her biggest complaint was that she no longer had any presets for specific holidays, and making custom light patterns in WLED is a big PITA.
+
+So Lightweave is a companion app for WLED, for the husbands and wives who just want an intuitive UI so they can enjoy their lights, while you take satisfaction in the nerdiness of home automation.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/favorites.jpg" width="240" alt="Favorites with Now Showing for each controller"><br><sub><b>Favorites</b>: what's on, and one tap to change it</sub></td>
+    <td align="center"><img src="docs/screenshots/themes.jpg" width="240" alt="Themes tab with upcoming Halloween themes"><br><sub><b>Themes</b>: the next holiday comes first</sub></td>
+    <td align="center"><img src="docs/screenshots/theme-sheet.jpg" width="240" alt="A theme's sheet with Show on the lights"><br><sub>Pick the lights, tap <b>Show on the lights</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/editor.jpg" width="240" alt="Pattern editor with color blocks and motion"><br><sub><b>Editor</b>: colors, counts and motion</sub></td>
+    <td align="center"><img src="docs/screenshots/lights.jpg" width="240" alt="Lights tab with controllers and schedules"><br><sub><b>Lights</b>: controllers and schedules</sub></td>
+    <td align="center"><img src="docs/screenshots/schedule.jpg" width="240" alt="Schedule editor using Holiday autopilot at sunset"><br><sub><b>Schedules</b>: on at sunset, holiday autopilot</sub></td>
+  </tr>
+</table>
+
 ## Run it
 
 With Docker:
@@ -22,31 +41,16 @@ npm run dev         # API on :8787, web app with hot reload on :5173
 
 ## Run it inside Home Assistant (HAOS)
 
-Lightweave runs as a Home Assistant app (formerly "add-on"), like File Editor or Z-Wave JS: it shows up in the sidebar, opens inside Home Assistant and the Companion app behind Home Assistant's login, and can add the WLED controllers Home Assistant already knows about.
+Lightweave runs as a Home Assistant app (formerly "add-on"): it shows up in the sidebar, opens inside Home Assistant and the Companion app behind Home Assistant's login, and can add the WLED controllers Home Assistant already knows about.
 
 ### Install from the app repository
 
 This GitHub repository is also a Home Assistant app repository (`repository.yaml` at the root, the app in `homeassistant/lightweave/`). In Home Assistant:
 
-1. **Settings → Apps → Install app → ⋮ → Repositories**, add `https://github.com/<you>/lightweave`, and close the dialog.
+1. **Settings → Apps → Install app → ⋮ → Repositories**, add `https://github.com/hyhenry/lightweave`, and close the dialog.
 2. Find **Lightweave** in the app store, install it, and turn on **Show in sidebar**.
 
 Home Assistant downloads the ready-made image (Raspberry Pi or PC); nothing is built on the device.
-
-### Releasing an update
-
-```bash
-npm run release 0.3.0
-git commit -am "Release 0.3.0" && git push
-```
-
-`npm run release` sets the version in `package.json` and `homeassistant/lightweave/config.yaml` and points the app at this repository's images. Pushing the new version starts the **Publish** workflow (GitHub → Actions), which runs the tests, builds the image for both architectures from the root `Dockerfile` and publishes it to `ghcr.io/<you>/lightweave`. When it finishes, Home Assistant shows **Update** on the Lightweave app (it checks periodically; **⋮ → Check for updates** in the app store checks now). The **CI** workflow runs the tests on every push.
-
-**One-time setup:** the repository must be public, and after the first Publish run, the image must be made public too: GitHub → your profile → **Packages → lightweave → Package settings → Change visibility → Public**. Otherwise Home Assistant can't download it.
-
-### Trying changes before a release
-
-`npm run build:ha` bundles a local copy in `build/homeassistant/lightweave` that Home Assistant builds on the device. Copy it into the `local_apps` share (Samba share or Terminal & SSH app), then **Check for updates** and install it from **Local apps**. Uninstall it again before using the repository version, since both would run.
 
 ### Inside Home Assistant
 
@@ -95,6 +99,8 @@ npm test
 ```
 
 Uses Node's built-in test runner, no extra dependencies. The API tests start the real server with a throwaway data folder and fake WLED controllers on random ports, so they never touch `./data` or real lights. Tests run in `America/Edmonton` time so sunset times are predictable.
+
+Publishing a new version of the Home Assistant app is covered in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Schedules
 

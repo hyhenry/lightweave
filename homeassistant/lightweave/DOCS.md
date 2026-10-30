@@ -8,6 +8,10 @@ Holiday themes, custom patterns and schedules for WLED lights, inside Home Assis
 2. In **Lights**, the WLED controllers Home Assistant already knows about are listed under **From Home Assistant**. Tap **Add** (or **Add all**). You can also add any WLED by its IP address.
 3. Pick a theme and tap **Show on the lights**.
 
+<img src="https://raw.githubusercontent.com/hyhenry/lightweave/main/docs/screenshots/themes.jpg" width="200" alt="Themes"> <img src="https://raw.githubusercontent.com/hyhenry/lightweave/main/docs/screenshots/theme-sheet.jpg" width="200" alt="Show on the lights"> <img src="https://raw.githubusercontent.com/hyhenry/lightweave/main/docs/screenshots/editor.jpg" width="200" alt="Pattern editor">
+
+To make your own, tap **Customize** on any theme or **My Patterns → Create a pattern**, then pick colors, how many lights each gets, and a motion.
+
 Sunrise and sunset times for schedules use Home Assistant's home location until you pick a city in **Lights → Schedules**. Schedule times use Home Assistant's time zone.
 
 ## Updates
