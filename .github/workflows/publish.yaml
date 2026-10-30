@@ -2,7 +2,8 @@
 # publishes it to GitHub's container registry, tagged with the version from
 # homeassistant/lightweave/config.yaml. Runs when that version changes
 # (`npm run release <version>`, then push), when this workflow changes, or by hand
-# (Actions → Publish → Run workflow). Home Assistant then offers the update.
+# (Actions → Publish → Run workflow). Home Assistant then offers the update, and
+# a GitHub release is created for the version.
 #
 # Based on Home Assistant's example app repository (home-assistant/apps-example).
 
@@ -137,3 +138,29 @@ jobs:
             ${{ needs.prepare.outputs.version }}
             latest
           registry-prefix: ${{ needs.prepare.outputs.registry_prefix }}
+
+  # A GitHub Release (and tag v<version>) once the image is out, with that
+  # version's notes from CHANGELOG.md. Skipped when the release already exists,
+  # e.g. when this workflow is re-run or edited without a version change.
+  release:
+    name: Create GitHub release
+    needs: [prepare, manifest]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists."
+            exit 0
+          fi
+          # The lines under "## <version>" up to the next heading.
+          awk -v v="$VERSION" '/^## / { on = ($2 == v); next } on' "$APP_DIR/CHANGELOG.md" > notes.md
+          [ -s notes.md ] || echo "::warning::No CHANGELOG.md entry for $VERSION."
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "$VERSION" --notes-file notes.md

@@ -49,5 +49,6 @@ Lightweave ${version} is ready to release from ${url}.
   1. Add a line for ${version} to homeassistant/lightweave/CHANGELOG.md
   2. git commit -am "Release ${version}" && git push
   3. Watch the "Publish" workflow on GitHub (Actions tab). When it's done,
-     Home Assistant shows the update (Settings → Apps → Lightweave).
+     Home Assistant shows the update (Settings → Apps → Lightweave), and the
+     release appears on GitHub with the changelog notes.
 `);
