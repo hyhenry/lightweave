@@ -94,7 +94,7 @@ async function show(device: Device, pattern: Pattern, epoch: number) {
 async function cantHear(device: Device): Promise<string | undefined> {
   const audio = await getAudio(device.host, undefined, 2000).catch(() => 'none' as const);
   if (canHear(audio)) return undefined;
-  return audio === 'capable' ? `${device.name} isn’t audio reactive yet. Turn it on in Lights.` : `${device.name} isn’t audio reactive.`;
+  return audio === 'capable' || audio === 'mic-off' ? `${device.name} isn’t audio reactive yet. Turn it on in Lights.` : `${device.name} isn’t audio reactive.`;
 }
 
 /** Show a pattern on the given devices. Devices started together stay in sync. */

@@ -29,6 +29,7 @@ export const api = {
   updateDevice: (id: string, d: Partial<Device>) => call<Device>('PUT', `/devices/${id}`, d),
   deleteDevice: (id: string) => call('DELETE', `/devices/${id}`),
   setAudioSource: (id: string, sourceId: string | null) => call<{ audio: string }>('PUT', `/devices/${id}/audio`, { sourceId }),
+  setMic: (id: string, enabled: boolean) => call<{ audio: string }>('PUT', `/devices/${id}/mic`, { enabled }),
 
   play: (body: { patternId?: string; pattern?: Pattern; deviceIds?: string[] }) =>
     call<{ results: Result[] }>('POST', '/play', body),

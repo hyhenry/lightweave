@@ -47,13 +47,14 @@ export interface Device {
   audioSource?: string; // device this one gets sound from (UDP Sound Sync)
 }
 
-export type AudioMode = 'mic' | 'receiving' | 'capable' | 'none';
+export type AudioMode = 'mic' | 'mic-off' | 'receiving' | 'capable' | 'none';
 
 export interface DeviceStatus {
   online: boolean;
   playing?: { patternId: string; patternName: string; mode: 'static' | 'stream' | 'wled'; pattern: Pattern };
   /**
-   * Sound reactivity: 'mic' has its own microphone, 'receiving' gets sound from another WLED,
+   * Sound reactivity: 'mic' has its own microphone, 'mic-off' has one with AudioReactive switched off,
+   * 'receiving' gets sound from another WLED,
    * 'capable' could receive but isn't set up, 'none' has no AudioReactive at all.
    */
   audio?: AudioMode;

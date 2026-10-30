@@ -41,10 +41,17 @@ export async function getAudio(host: string, info?: WledInfo, timeoutMs?: number
   const ar = await getAudioConfig(host, timeoutMs).catch(() => undefined);
   if (!ar) return 'none';
   if (ar.enabled && (ar.sync?.mode ?? 0) & SYNC_RECEIVE) return 'receiving';
-  return ar.enabled && hasMic(ar) ? 'mic' : 'capable';
+  if (hasMic(ar)) return ar.enabled ? 'mic' : 'mic-off';
+  return 'capable';
 }
 
 export const canHear = (mode: AudioMode) => mode === 'mic' || mode === 'receiving';
+
+/** Switch a controller's own microphone on or off: saved settings, and right now. */
+export async function setMic(host: string, enabled: boolean) {
+  await setAudioConfig(host, { enabled });
+  await setState(host, { AudioReactive: { enabled } });
+}
 
 /**
  * Pass sound from a controller with a microphone to one without. Saving settings

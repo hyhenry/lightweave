@@ -2,7 +2,7 @@
 
 import type { AudioMode, Device, DeviceStatus } from '../shared/types.ts';
 import { getInfo, getState } from './wled/client.ts';
-import { getAudio, linkAudio, unlinkAudio } from './wled/audio.ts';
+import { getAudio, linkAudio, setMic, unlinkAudio } from './wled/audio.ts';
 import { store } from './store.ts';
 import * as player from './player.ts';
 
@@ -115,6 +115,20 @@ export async function setAudioSource(target: Device, sourceId: string | null): P
       forgetAudio(target.id, ...(source ? [source.id] : []));
       store.updateDevice(target.id, { audioSource: undefined });
     }
+    return await getAudio(target.host);
+  } catch (e) {
+    if (e instanceof AudioSetupError) throw e;
+    throw new AudioSetupError(`Couldn’t update ${target.name}: ${(e as Error).message}`, 502);
+  }
+}
+
+/** Turn a controller's own microphone on or off. */
+export async function setOwnMic(target: Device, enabled: boolean): Promise<AudioMode> {
+  try {
+    const mode = await getAudio(target.host);
+    if (mode !== 'mic' && mode !== 'mic-off') throw new AudioSetupError(`${target.name} has no microphone`, 400);
+    await setMic(target.host, enabled);
+    forgetAudio(target.id);
     return await getAudio(target.host);
   } catch (e) {
     if (e instanceof AudioSetupError) throw e;

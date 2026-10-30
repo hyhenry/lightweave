@@ -152,6 +152,35 @@ test('audio passthrough turns on and back off cleanly on both controllers', asyn
   assert.equal((await device(server, r.id)).status.audio, 'capable');
 });
 
+test('a controller’s own microphone turns off and back on', async (t) => {
+  const { server, mock } = await setup(t, { audio: 'mic' });
+  const d = await addDevice(server, mock);
+  const ar = () => mock.cfg.um.AudioReactive;
+  const sync = structuredClone(ar().sync);
+  const lastAudioState = () => statePosts(mock).filter((b: any) => b.AudioReactive).at(-1).AudioReactive;
+
+  assert.equal((await server.send<any>('PUT', `/api/devices/${d.id}/mic`, { enabled: false })).body.audio, 'mic-off');
+  assert.equal(ar().enabled, false);
+  assert.equal(lastAudioState().enabled, false);
+  assert.deepEqual(ar().sync, sync, 'sound sharing is left alone');
+  assert.equal((await device(server, d.id)).status.audio, 'mic-off', 'the list shows the change right away');
+  const blocked = await server.send<any>('POST', '/api/play', { patternId: 'builtin-sound-reactive-neon-pulse' });
+  assert.match(blocked.body.results[0].error, /Turn it on in Lights/);
+
+  assert.equal((await server.send<any>('PUT', `/api/devices/${d.id}/mic`, { enabled: true })).body.audio, 'mic');
+  assert.equal(ar().enabled, true);
+  assert.equal(lastAudioState().enabled, true);
+  assert.equal((await device(server, d.id)).status.audio, 'mic');
+});
+
+test('the microphone toggle refuses controllers without one', async (t) => {
+  const { server, mock } = await setup(t, { audio: 'sync' });
+  const d = await addDevice(server, mock);
+  const res = await server.send<any>('PUT', `/api/devices/${d.id}/mic`, { enabled: true });
+  assert.equal(res.status, 400);
+  assert.equal(mock.cfg.um.AudioReactive.enabled, false);
+});
+
 test('patterns: create, edit, favorite, delete; built-ins are protected', async (t) => {
   const { server } = await setup(t);
   const created = (await server.send<any>('POST', '/api/patterns', { name: 'Porch', blocks: [{ color: '#ff5a00', count: 2 }], animation: 'bogus', speed: 99 })).body;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Device } from '../../../../shared/types.ts';
 import { api, type DeviceWithStatus } from '../../api.ts';
 import { Sheet, Toggle, useToast } from '../../components/ui.tsx';
-import { AudioPassthrough } from './AudioPassthrough.tsx';
+import { AudioPassthrough, OwnMic } from './AudioPassthrough.tsx';
 
 interface Props {
   device: DeviceWithStatus;
@@ -15,6 +15,7 @@ interface Props {
 export function EditDevice({ device, devices, onChanged, onClose, onDone }: Props) {
   const toast = useToast();
   const [d, setD] = useState<Device>(device);
+  const hasMic = device.status.audio === 'mic' || device.status.audio === 'mic-off';
   const canReceiveSound = device.status.audio === 'capable' || device.status.audio === 'receiving';
 
   const save = async () => {
@@ -50,6 +51,7 @@ export function EditDevice({ device, devices, onChanged, onClose, onDone }: Prop
         <p className="hint">To change this, update LED Preferences in WLED. Lightweave picks it up automatically.</p>
       </div>
       <Toggle label="Run patterns the other way" checked={d.reverse} onChange={(reverse) => setD({ ...d, reverse })} />
+      {hasMic && <OwnMic device={device} devices={devices} onChanged={onChanged} />}
       {canReceiveSound && <AudioPassthrough device={device} devices={devices} onChanged={onChanged} />}
       <div className="row-btns">
         <button className="btn btn-danger" onClick={remove}>

@@ -27,7 +27,7 @@ export function AudioPassthrough({ device, devices, onChanged }: { device: Devic
 
   return (
     <div className="field audio-field">
-      <Toggle label="Audio reactive" checked={on} onChange={(v) => !busy && sources.length && apply(v)} />
+      <Toggle label="Audio reactive" checked={on} onChange={(v) => !busy && (!v || sources.length) && apply(v)} />
       {!sources.length ? (
         <p className="hint">Needs another WLED with a microphone to share its sound.</p>
       ) : (
@@ -43,6 +43,38 @@ export function AudioPassthrough({ device, devices, onChanged }: { device: Devic
             </div>
           </>
         )
+      )}
+    </div>
+  );
+}
+
+/** Switch a controller's own microphone on or off. */
+export function OwnMic({ device, devices, onChanged }: { device: DeviceWithStatus; devices: DeviceWithStatus[]; onChanged: () => void }) {
+  const toast = useToast();
+  const listeners = devices.filter((x) => x.audioSource === device.id);
+  const [on, setOn] = useState(device.status.audio === 'mic');
+  const [busy, setBusy] = useState(false);
+
+  const apply = async (next: boolean) => {
+    setBusy(true);
+    try {
+      await api.setMic(device.id, next);
+      setOn(next);
+      toast(next ? 'Audio reactive on' : 'Audio reactive off');
+      onChanged();
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="field audio-field">
+      <Toggle label="Audio reactive" checked={on} onChange={(v) => !busy && apply(v)} />
+      <p className="hint">Uses this controller’s microphone.</p>
+      {on && listeners.length > 0 && (
+        <p className="hint">{listeners.map((x) => x.name).join(', ')} also get sound from it and will stop reacting too.</p>
       )}
     </div>
   );

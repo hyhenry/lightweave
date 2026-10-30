@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Device } from '../../shared/types.ts';
 import { getInfo } from '../wled/client.ts';
 import { store } from '../store.ts';
-import { forgetAudio, setAudioSource, withStatus } from '../devices.ts';
+import { forgetAudio, setAudioSource, setOwnMic, withStatus } from '../devices.ts';
 import { cleanDeviceName } from '../validate.ts';
 import * as player from '../player.ts';
 
@@ -64,6 +64,13 @@ export function deviceRoutes(app: FastifyInstance) {
     const target = store.device(req.params.id);
     if (!target) return notFound(reply);
     return { audio: await setAudioSource(target, req.body?.sourceId ?? null) };
+  });
+
+  /** Turn a controller's own microphone on or off. */
+  app.put<{ Params: { id: string }; Body: { enabled?: boolean } }>('/api/devices/:id/mic', async (req, reply) => {
+    const target = store.device(req.params.id);
+    if (!target) return notFound(reply);
+    return { audio: await setOwnMic(target, Boolean(req.body?.enabled)) };
   });
 
   app.delete<{ Params: { id: string } }>('/api/devices/:id', async (req) => {
