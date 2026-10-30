@@ -1,0 +1,14 @@
+services:
+  lightweave:
+    build: .
+    image: lightweave:latest
+    container_name: lightweave
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=America/New_York
+    # Bridge networking is fine: add your lights by IP address.
+    # (".local" mDNS names don't resolve inside this Alpine image.)
