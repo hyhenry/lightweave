@@ -5,9 +5,9 @@ name: Lightweave
 version: "0.2.0"
 slug: lightweave
 description: Holiday themes, custom patterns and schedules for your WLED lights
-url: https://github.com/OWNER/lightweave
+url: https://github.com/hyhenry/lightweave
 # Prebuilt by GitHub Actions from the repository's Dockerfile (Raspberry Pi and PC).
-image: ghcr.io/OWNER/lightweave
+image: ghcr.io/hyhenry/lightweave
 arch:
   - aarch64
   - amd64
