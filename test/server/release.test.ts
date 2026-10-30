@@ -22,4 +22,5 @@ test('the app repository is laid out the way Home Assistant expects', () => {
   assert.match(config, /^image: ghcr\.io\/[a-z0-9_.-]+\/lightweave$/im);
   assert.match(config, /^ingress: true$/m);
   assert.match(config, /^ingress_port: 8787$/m);
+  assert.match(config, /^panel_admin: false$/m, 'non-admin household members need the sidebar entry');
 });

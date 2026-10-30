@@ -2,7 +2,7 @@
 # `version` goes up; `npm run release <version>` sets it (with package.json) and
 # the GitHub "Publish" workflow builds the image for that version.
 name: Lightweave
-version: "0.2.0"
+version: "0.2.1"
 slug: lightweave
 description: Holiday themes, custom patterns and schedules for your WLED lights
 url: https://github.com/hyhenry/lightweave
@@ -18,6 +18,8 @@ ingress: true
 ingress_port: 8787
 panel_icon: mdi:string-lights
 panel_title: Lightweave
+# Show it in everyone's sidebar, not just administrators'.
+panel_admin: false
 # Read the WLED controllers and home location Home Assistant already has.
 homeassistant_api: true
 # Optional direct access (e.g. for a phone home-screen shortcut). Off by default.
