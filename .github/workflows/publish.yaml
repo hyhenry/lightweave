@@ -62,17 +62,19 @@ jobs:
           VERSION: ${{ steps.info.outputs.version }}
           NAME: ${{ steps.info.outputs.name }}
           DESCRIPTION: ${{ steps.info.outputs.description }}
+        # The info helper outputs JSON values ("0.2.0" with its quotes), so decode them.
         run: |
-          if [[ "$IMAGE" == *OWNER* ]]; then
+          image=$(jq -r . <<< "$IMAGE")
+          if [[ "$image" == *OWNER* ]]; then
             echo "::error::Run 'npm run release <version>' first so config.yaml points at your GitHub images."
             exit 1
           fi
           {
-            echo "image_name=${IMAGE##*/}"
-            echo "registry_prefix=${IMAGE%/*}"
-            echo "version=${VERSION}"
-            echo "name=${NAME}"
-            echo "description=${DESCRIPTION}"
+            echo "image_name=${image##*/}"
+            echo "registry_prefix=${image%/*}"
+            echo "version=$(jq -r . <<< "$VERSION")"
+            echo "name=$(jq -r . <<< "$NAME")"
+            echo "description=$(jq -r . <<< "$DESCRIPTION")"
           } >> "$GITHUB_OUTPUT"
 
       - name: Prepare build matrix
