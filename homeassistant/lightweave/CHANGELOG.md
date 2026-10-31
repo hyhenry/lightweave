@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3
+
+- Sound reactive patterns react much more clearly: lights go dark between sounds instead of resting on the second color, and every effect gets its own tuned settings.
+- New Bass Burst and Bass Stream effects fire on bass hits rather than on overall loudness. Neon Pulse and Monster Splash now use them.
+- Sound patterns with two or three colors save their colors as a custom palette on the WLED controller, which shows up in WLED's palette list.
+- Party Meter is now green and yellow, and Canada Beat is gone.
+
 ## 0.2.2
 
 - Lights with their own microphone can now turn audio reactive off (and back on) in their settings.
