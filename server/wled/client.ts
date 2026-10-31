@@ -60,3 +60,19 @@ export async function getState(host: string, timeoutMs?: number): Promise<{ on: 
 export function setState(host: string, state: Record<string, unknown>) {
   return request(host, '/json/state', state);
 }
+
+/** A JSON file from the controller's file system, or undefined if there's no such file. */
+export async function readFile(host: string, name: string, timeoutMs = 4000): Promise<unknown> {
+  const res = await fetch(`${baseUrl(host)}/${name}`, { signal: AbortSignal.timeout(timeoutMs) });
+  if (res.status === 404) return undefined;
+  if (!res.ok) throw new Error(`WLED replied ${res.status}`);
+  return res.json();
+}
+
+/** Save a file on the controller (like WLED's own file editor does). */
+export async function uploadFile(host: string, name: string, content: string, timeoutMs = 4000) {
+  const form = new FormData();
+  form.append('data', new Blob([content], { type: 'application/json' }), `/${name}`);
+  const res = await fetch(`${baseUrl(host)}/upload`, { method: 'POST', body: form, signal: AbortSignal.timeout(timeoutMs) });
+  if (!res.ok) throw new Error(`WLED replied ${res.status}`);
+}

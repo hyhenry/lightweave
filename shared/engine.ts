@@ -242,6 +242,33 @@ function soundPixel(style: SoundPreview, l: Layout, i: number, n: number, t: num
       }
       return out;
     }
+    case 'burst': {
+      // Only the stronger beats (the "bass") set off a burst somewhere new.
+      let out = off;
+      const beat = t * 2;
+      for (let k = Math.floor(beat) - 1; k <= Math.floor(beat); k++) {
+        if (hash(k, 99) < 0.35) continue;
+        const age = beat - k;
+        const center = hash(k, 7) * n;
+        const dist = Math.abs(i - center);
+        const reach = 1 + age * n * 0.12;
+        const sparkle = 0.4 + 0.6 * hash(i, Math.floor(t * 20));
+        if (dist < reach) out = scale(gradient(l, hash(k, 8)), Math.exp(-age * 3) * (1 - dist / reach) * sparkle);
+      }
+      return out;
+    }
+    case 'stream': {
+      // Each beat sends a spark from the start of the strip toward the end.
+      let out = off;
+      const beat = t * 2;
+      for (let k = Math.floor(beat) - 3; k <= Math.floor(beat); k++) {
+        if (hash(k, 99) < 0.35) continue;
+        const age = beat - k;
+        const dist = Math.abs(i - age * n * 0.3);
+        if (dist < 3) out = scale(gradient(l, hash(k, 8)), (1 - dist / 3) * Math.exp(-age * 0.6));
+      }
+      return out;
+    }
     case 'confetti': {
       const slot = Math.floor(t * 9);
       let out = off;

@@ -17,7 +17,7 @@ export interface MockOptions {
   quiet?: boolean;
 }
 
-export const EFFECTS = ['Solid', 'Blink', 'Gravcenter', 'Gravimeter', 'Pixelwave', 'Puddles', 'Ripple Peak', 'Midnoise', 'Blurz', 'Juggles', 'Freqwave', 'DJ Light', 'Noisefire'];
+export const EFFECTS = ['Solid', 'Blink', 'Gravcenter', 'Gravimeter', 'Pixelwave', 'Puddles', 'Ripple Peak', 'Midnoise', 'Blurz', 'Juggles', 'Freqwave', 'DJ Light', 'Noisefire', 'PS Sonic Stream', 'PS Sonic Boom'];
 export const PALETTES = ['Default', '* Random Cycle', '* Color 1', '* Colors 1&2', '* Color Gradient', '* Colors Only', 'Party'];
 
 export interface MockWled {
@@ -30,6 +30,9 @@ export interface MockWled {
   /** When true, requests are never answered (like a controller that's unplugged). */
   hang: boolean;
   ddp: { frames: number; lastFrame?: Buffer };
+  files: Record<string, string>; // uploaded files by name, e.g. "palette0.json"
+  /** When true, uploads are refused like on a controller locked with a settings PIN. */
+  locked: boolean;
   close(): Promise<void>;
 }
 
@@ -52,6 +55,8 @@ export async function startMockWled(opts: MockOptions = {}): Promise<MockWled> {
     gets: [] as string[],
     hang: false,
     ddp: { frames: 0, lastFrame: undefined as Buffer | undefined },
+    files: {} as Record<string, string>,
+    locked: false,
   };
 
   let udp: dgram.Socket | undefined;
@@ -78,14 +83,31 @@ export async function startMockWled(opts: MockOptions = {}): Promise<MockWled> {
       if (mock.hang) return;
       res.setHeader('content-type', 'application/json');
       const send = (data: unknown) => res.end(JSON.stringify(data));
-      const body = raw ? JSON.parse(raw) : undefined;
+      const multipart = req.headers['content-type']?.startsWith('multipart/form-data');
+      const body = raw && !multipart ? JSON.parse(raw) : undefined;
       if (req.method === 'POST') mock.posts.push({ path: req.url ?? '', body });
       else mock.gets.push(req.url ?? '');
+
+      const file = req.url?.match(/^\/(palette\d+\.json)$/)?.[1];
+      if (file && req.method === 'GET' && mock.files[file]) return res.end(mock.files[file]);
 
       switch (req.url) {
         case '/json/info': {
           const u = audio === 'none' ? {} : audio === 'mic' ? { AudioReactive: [], 'Audio Source': ['I2S digital'] } : { AudioReactive: [] };
-          return send({ name: opts.name ?? 'Mock Roofline', ver: '0.15.0', leds: { count: mock.leds }, u });
+          const cpalcount = Object.keys(mock.files).filter((f) => f.startsWith('palette')).length;
+          return send({ name: opts.name ?? 'Mock Roofline', ver: '16.0.1', leds: { count: mock.leds }, u, cpalcount, cpalmax: 10, umpalcount: 0 });
+        }
+        case '/upload': {
+          if (mock.locked) {
+            res.statusCode = 401;
+            return res.end('locked');
+          }
+          // One file per upload: its name from the part header, its contents after the blank line.
+          const name = raw.match(/filename="\/?([^"]+)"/)?.[1];
+          const content = raw.split('\r\n\r\n')[1]?.split('\r\n--')[0];
+          if (name && content !== undefined) mock.files[name] = content;
+          log(`[http] upload <- ${name} ${content}`);
+          return send({ success: true });
         }
         case '/json/effects':
           return send(EFFECTS);
@@ -132,6 +154,12 @@ export async function startMockWled(opts: MockOptions = {}): Promise<MockWled> {
     },
     set hang(on: boolean) {
       mock.hang = on;
+    },
+    get locked() {
+      return mock.locked;
+    },
+    set locked(on: boolean) {
+      mock.locked = on;
     },
     async close() {
       if (closed) return;

@@ -113,9 +113,46 @@ test('sound patterns run WLED’s own effect, looked up by name', async (t) => {
   const res = await server.send<any>('POST', '/api/play', { patternId: 'builtin-sound-reactive-neon-pulse' });
   assert.equal(res.body.results[0].ok, true);
   const seg = statePosts(mock).at(-1).seg;
-  assert.equal(seg.fx, 4); // "Pixelwave" in the mock's effect list
-  assert.equal(seg.pal, 4); // "* Color Gradient"
-  assert.equal(seg.col.length, 3);
+  assert.equal(seg.fx, 13); // "PS Sonic Stream" in the mock's effect list
+  assert.deepEqual(seg.col[1], [0, 0, 0], 'effects fade to black, not to the second color');
+  // Every slider and option is sent, so nothing carries over from the last effect.
+  assert.deepEqual([seg.ix, seg.c1, seg.c2, seg.c3, seg.o1, seg.o2, seg.o3], [128, 128, 64, 0, false, true, false]);
+});
+
+test('sound patterns with several colors get their own palette on the controller', async (t) => {
+  const { server, mock } = await setup(t, { audio: 'mic' });
+  await addDevice(server, mock);
+  await server.send('POST', '/api/play', { patternId: 'builtin-sound-reactive-neon-pulse' });
+  const saved = JSON.parse(mock.files['palette0.json']);
+  assert.equal(saved.lightweave, true);
+  assert.equal(saved.palette.length, 8, 'three colors and back to the first');
+  assert.equal(statePosts(mock).at(-1).seg.pal, 200); // first custom palette on WLED 16
+
+  // The same colors again don't rewrite the file.
+  const uploads = () => mock.posts.filter((p) => p.path === '/upload').length;
+  await server.send('POST', '/api/play', { patternId: 'builtin-sound-reactive-ocean-ripples' });
+  assert.equal(uploads(), 2);
+  await server.send('POST', '/api/play', { patternId: 'builtin-sound-reactive-ocean-ripples' });
+  assert.equal(uploads(), 2);
+});
+
+test('sound patterns leave people’s own palettes alone', async (t) => {
+  const { server, mock } = await setup(t, { audio: 'mic' });
+  mock.files['palette0.json'] = JSON.stringify({ palette: [0, 'FF0000', 255, '0000FF'] });
+  await addDevice(server, mock);
+  await server.send('POST', '/api/play', { patternId: 'builtin-sound-reactive-neon-pulse' });
+  assert.deepEqual(JSON.parse(mock.files['palette0.json']).palette, [0, 'FF0000', 255, '0000FF']);
+  assert.ok(mock.files['palette1.json']);
+  assert.equal(statePosts(mock).at(-1).seg.pal, 199);
+});
+
+test('sound patterns still play when the controller won’t take a palette', async (t) => {
+  const { server, mock } = await setup(t, { audio: 'mic' });
+  mock.locked = true;
+  await addDevice(server, mock);
+  const res = await server.send<any>('POST', '/api/play', { patternId: 'builtin-sound-reactive-neon-pulse' });
+  assert.equal(res.body.results[0].ok, true);
+  assert.equal(statePosts(mock).at(-1).seg.pal, 2); // "* Color 1"
 });
 
 test('sound patterns refuse lights that can’t hear', async (t) => {

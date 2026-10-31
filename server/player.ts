@@ -3,7 +3,7 @@
 
 import type { Device, DeviceStatus, Pattern } from '../shared/types.ts';
 import { hexToRgb, isStatic, isWledEffect, render, reverseFrame, toWledRanges } from '../shared/engine.ts';
-import { soundEffect } from '../shared/sound.ts';
+import { DEFAULT_PARAMS, effectSpeed, soundEffect } from '../shared/sound.ts';
 import { hostOnly, setState, toWledBri } from './wled/client.ts';
 import { sendEffect, sendStatic } from './wled/show.ts';
 import { sendDdpFrame } from './wled/ddp.ts';
@@ -60,16 +60,13 @@ function effective(pattern: Pattern, device: Device): Pattern {
 
 async function sendSound(device: Device, p: Pattern) {
   const fx = soundEffect(p.sound);
-  const colors = p.blocks.slice(0, 3).map((b) => hexToRgb(b.color));
-  // WLED's built-in palettes that follow the segment's own 1–3 colors.
-  const palette = !fx.usesColors ? undefined : colors.length === 1 ? '* Color 1' : colors.length === 2 ? '* Colors 1&2' : '* Color Gradient';
   await sendEffect(device.host, {
     effect: fx.wled,
-    palette,
-    colors,
-    speed: Math.round(((p.speed - 1) / 9) * 255),
+    colors: p.blocks.slice(0, 3).map((b) => hexToRgb(b.color)),
+    ownColors: !fx.usesColors,
+    speed: effectSpeed(fx, p.speed),
     brightness: p.brightness,
-    params: fx.params,
+    params: { ...DEFAULT_PARAMS, ...fx.params },
   });
 }
 
