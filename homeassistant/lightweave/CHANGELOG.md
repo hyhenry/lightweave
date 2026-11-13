@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.7
+
+- Inside Home Assistant on a wide screen with its sidebar showing, the Lightweave title bar (with All on/off) is back. On phones it stays hidden.
+- Turning a light on now says so when the light can't be reached, instead of the switch quietly flipping back. All on/off does the same.
+- Failed saves and deletes show an error instead of nothing happening.
+- Removing a light takes it out of your schedules. A schedule that was only for that light is switched off until you pick lights for it, so it never turns on every light by surprise.
+- Lightweave's saved data is protected: if the file can't be read, it's kept aside rather than overwritten.
+- Home Assistant WLED devices with a bad address no longer hide the others in the import list.
+
 ## 0.2.6
 
 - Inside Home Assistant, Lightweave uses Home Assistant's own fonts and text sizes, so it looks at home there and fits more on screen.

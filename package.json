@@ -1,6 +1,6 @@
 {
   "name": "lightweave",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "type": "module",
   "description": "A friendly pattern and theme companion for WLED lights",
