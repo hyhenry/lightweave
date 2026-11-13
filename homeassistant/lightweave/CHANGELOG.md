@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4
+
+- Inside Home Assistant, Lightweave now uses the colors of your active Home Assistant theme, light or dark, and follows it when you switch. Opened outside Home Assistant, it keeps its own colors.
+
 ## 0.2.3
 
 - Sound reactive patterns react much more clearly: lights go dark between sounds instead of resting on the second color, and every effect gets its own tuned settings.
