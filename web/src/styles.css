@@ -69,9 +69,13 @@ strong, b { font-weight: var(--fw-medium, bolder); }
   background: var(--surface-2); border: 1px solid var(--line); font-weight: var(--fw-action, 600); font-size: var(--fs-m, 15px);
 }
 .power-pill.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-/* Inside Home Assistant: no title bar; the "All on" pill moves to the Lights tab's Controllers heading. */
-:root[data-ha-embedded] .now-list { margin-top: 12px; }
-:root[data-ha-embedded] .filters { top: 0; }
+/* Inside Home Assistant without its sidebar (phones), Home Assistant shows its own header, so the title
+   bar is hidden and the "All on" pill moves to the Lights tab's Controllers heading. */
+.lights-power { display: none; }
+:root[data-ha-embedded]:not([data-ha-sidebar]) .topbar { display: none; }
+:root[data-ha-embedded]:not([data-ha-sidebar]) .lights-power { display: contents; }
+:root[data-ha-embedded]:not([data-ha-sidebar]) .now-list { margin-top: 12px; }
+:root[data-ha-embedded]:not([data-ha-sidebar]) .filters { top: 0; }
 .section-title .power-pill { min-height: 32px; padding: 0 14px; font-size: var(--fs-m, 14px); text-transform: none; letter-spacing: normal; color: var(--text); }
 .section-title .power-pill.on { color: var(--accent-ink); }
 .now-showing {

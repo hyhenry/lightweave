@@ -141,6 +141,31 @@ function apply(source: Element): void {
   if (lum !== null) root.style.setProperty('color-scheme', lum > 0.4 ? 'light' : 'dark');
 }
 
+/**
+ * Marks the page with `data-ha-sidebar` while Home Assistant shows its sidebar beside the panel
+ * (wide screens, unless the user set the sidebar to always hidden), the same rule Home Assistant uses.
+ * Without the sidebar, Home Assistant puts its own header above the panel, so Lightweave leaves out its title bar.
+ */
+function trackSidebar(source: Element): void {
+  const win = source.ownerDocument.defaultView;
+  if (!win) return;
+  const narrow = win.matchMedia('(max-width: 870px)');
+  const update = () => {
+    let docked: unknown;
+    try {
+      docked = (source as Element & { hass?: { dockedSidebar?: string } }).hass?.dockedSidebar;
+    } catch {
+      // No hass object to read; go by width alone.
+    }
+    document.documentElement.toggleAttribute('data-ha-sidebar', !narrow.matches && docked !== 'always_hidden');
+  };
+  update();
+  narrow.addEventListener('change', update);
+  // Docking or hiding the sidebar resizes this panel.
+  window.addEventListener('resize', update);
+  if ('ResizeObserver' in window) new ResizeObserver(update).observe(document.documentElement);
+}
+
 /** Follows the Home Assistant theme when running inside it; does nothing otherwise. Call before rendering. */
 export function followHomeAssistantTheme(): void {
   const source = parentThemeElement();
@@ -150,6 +175,11 @@ export function followHomeAssistantTheme(): void {
     adoptParentFonts(source.ownerDocument);
   } catch {
     // Fonts fall back to the system font.
+  }
+  try {
+    trackSidebar(source);
+  } catch {
+    // Treated as no sidebar: the title bar stays hidden.
   }
   const refresh = () => {
     try {

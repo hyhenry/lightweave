@@ -88,8 +88,6 @@ export function App() {
     reloadDevices();
   };
 
-  // Set by followHomeAssistantTheme() before the first render (read here, not at import, which runs earlier).
-  const IN_HOME_ASSISTANT = document.documentElement.hasAttribute('data-ha-embedded');
   const allPower = devices.length > 1 && (
     <button className={`power-pill ${anyOn ? 'on' : ''}`} onClick={setAllPower}>
       {anyOn ? 'All off' : 'All on'}
@@ -98,18 +96,16 @@ export function App() {
 
   return (
     <div className="app">
-      {/* Inside Home Assistant its own panel header already names the app, so the title bar is left out. */}
-      {!IN_HOME_ASSISTANT && (
-        <header className="topbar">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden>
-              ✦
-            </span>
-            Lightweave
-          </div>
-          {allPower}
-        </header>
-      )}
+      {/* Hidden inside Home Assistant when its own header is shown instead (no sidebar); see styles.css. */}
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden>
+            ✦
+          </span>
+          Lightweave
+        </div>
+        {allPower}
+      </header>
 
       {devices.length > 0 && (
         <div className="now-list">
@@ -125,7 +121,7 @@ export function App() {
         {tab === 'mine' && (
           <MyPatterns patterns={library.mine} favoriteIds={library.favoriteIds} playingIds={playingIds} onOpen={setSelected} onCreate={() => setEditing(newPattern())} />
         )}
-        {tab === 'lights' && <Lights devices={devices} loaded={loaded} refresh={reloadDevices} patterns={library.patterns} favorites={library.favorites} powerAction={IN_HOME_ASSISTANT && allPower} />}
+        {tab === 'lights' && <Lights devices={devices} loaded={loaded} refresh={reloadDevices} patterns={library.patterns} favorites={library.favorites} powerAction={allPower} />}
       </main>
 
       <nav className="tabbar">

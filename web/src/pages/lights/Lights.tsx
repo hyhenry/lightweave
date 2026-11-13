@@ -14,7 +14,7 @@ interface Props {
   refresh: () => Promise<void>;
   patterns: Pattern[];
   favorites: string[];
-  /** The "All on/off" button, shown here when there's no title bar to hold it (inside Home Assistant). */
+  /** The "All on/off" button, shown here only when the title bar is hidden (inside Home Assistant, no sidebar). */
   powerAction?: ReactNode;
 }
 
@@ -42,7 +42,7 @@ export function Lights({ devices, loaded, refresh, patterns, favorites, powerAct
         <>
           <h2 className="section-title">
             Controllers
-            {powerAction}
+            {powerAction && <span className="lights-power">{powerAction}</span>}
           </h2>
           <ul className="device-list">
             {devices.map((d) => (
