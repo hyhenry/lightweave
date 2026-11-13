@@ -33,7 +33,7 @@ export function Schedules({ devices, patterns, favorites }: Props) {
   const setEnabled = async (s: ScheduleWithNext, enabled: boolean) => {
     setSchedules((x) => x.map((y) => (y.id === s.id ? { ...y, enabled } : y)));
     await api.updateSchedule(s.id, { ...s, enabled }).catch((e) => toast(e.message, 'err'));
-    load();
+    await load().catch(() => {});
   };
 
   return (
@@ -52,6 +52,9 @@ export function Schedules({ devices, patterns, favorites }: Props) {
                     <small>{showingLabel(s.patternId, s.showing)}</small>
                     {next && <small className="audio-tag">Next on {next}</small>}
                     {s.enabled && usesSun(s) && !settings.location && <small className="err-text">Pick your city below for sunset times</small>}
+                    {s.deviceIds.length > 0 && !s.deviceIds.some((id) => devices.some((d) => d.id === id)) && (
+                      <small className="err-text">Its lights were removed. Open it to pick lights.</small>
+                    )}
                   </span>
                 </button>
                 <label className="power-switch" aria-label={`${s.name} on/off`}>
@@ -71,7 +74,7 @@ export function Schedules({ devices, patterns, favorites }: Props) {
         timeZone={timeZone}
         onChange={(s) => {
           setSettings(s);
-          load();
+          load().catch(() => {});
         }}
       />
 
@@ -86,7 +89,7 @@ export function Schedules({ devices, patterns, favorites }: Props) {
           onClose={() => setEditing(null)}
           onSaved={async () => {
             setEditing(null);
-            await load();
+            await load().catch(() => {});
           }}
         />
       )}

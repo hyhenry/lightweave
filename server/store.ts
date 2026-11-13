@@ -33,7 +33,14 @@ export function createStore(dataDir: string) {
   let data: Data;
   try {
     data = { ...empty, ...JSON.parse(readFileSync(file, 'utf8')) };
-  } catch {
+  } catch (e) {
+    // No file yet is a fresh start. A file that can't be read is set aside first,
+    // so the next save doesn't write over the household's lights and patterns.
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+      const aside = `${file}.unreadable-${Date.now()}`;
+      renameSync(file, aside); // if even this fails, stop rather than lose the data
+      console.error(`[store] couldn't read ${file} (${(e as Error).message}); moved it to ${aside} and started fresh`);
+    }
     data = empty;
   }
 
@@ -78,6 +85,15 @@ export function createStore(dataDir: string) {
       data.devices = data.devices.filter((d) => d.id !== id);
       delete data.active[id];
       data.off = data.off.filter((x) => x !== id);
+      for (const d of data.devices) if (d.audioSource === id) delete d.audioSource;
+      for (const s of data.schedules) {
+        if (!s.deviceIds.includes(id)) continue;
+        const rest = s.deviceIds.filter((x) => x !== id);
+        // An empty list means "all lights", so a schedule for just this light keeps
+        // its (now unknown) id and is switched off; it targets nothing until edited.
+        if (rest.length) s.deviceIds = rest;
+        else s.enabled = false;
+      }
       save();
     },
 
@@ -146,7 +162,5 @@ export function createStore(dataDir: string) {
     },
   };
 }
-
-export type Store = ReturnType<typeof createStore>;
 
 export const store = createStore(config.dataDir);

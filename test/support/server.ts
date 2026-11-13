@@ -39,9 +39,10 @@ export interface TestServer {
   stop: () => Promise<void>;
 }
 
+/** `data` is the saved file's contents: an object (written as JSON) or a raw string. */
 export async function startServer(opts: { data?: unknown; ddpPort?: number; env?: Record<string, string> } = {}): Promise<TestServer> {
   const dataDir = mkdtempSync(join(tmpdir(), 'lightweave-test-'));
-  if (opts.data) writeFileSync(join(dataDir, 'lightweave.json'), JSON.stringify(opts.data));
+  if (opts.data) writeFileSync(join(dataDir, 'lightweave.json'), typeof opts.data === 'string' ? opts.data : JSON.stringify(opts.data));
   const port = await freeTcpPort();
   const ddpPort = opts.ddpPort ?? (await freeUdpPort());
   let output = '';

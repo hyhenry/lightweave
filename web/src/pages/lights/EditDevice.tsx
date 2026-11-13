@@ -29,8 +29,12 @@ export function EditDevice({ device, devices, onChanged, onClose, onDone }: Prop
 
   const remove = async () => {
     if (!confirm(`Remove ${device.name} from Lightweave?`)) return;
-    await api.deleteDevice(device.id);
-    onDone();
+    try {
+      await api.deleteDevice(device.id);
+      onDone();
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
   };
 
   return (

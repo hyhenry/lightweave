@@ -24,7 +24,8 @@ interface Props {
 
 export function ScheduleEditor({ initial, devices, patterns, favorites, settings, onSettings, onClose, onSaved }: Props) {
   const toast = useToast();
-  const [s, setS] = useState(initial);
+  // Lights removed since the schedule was saved drop out here, where the chips show what's picked.
+  const [s, setS] = useState(() => ({ ...initial, deviceIds: initial.deviceIds.filter((id) => devices.some((d) => d.id === id)) }));
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<Schedule>) => setS((x) => ({ ...x, ...patch }));
   const choices = useMemo(() => patternChoices(patterns, favorites), [patterns, favorites]);
@@ -60,8 +61,12 @@ export function ScheduleEditor({ initial, devices, patterns, favorites, settings
 
   const remove = async () => {
     if (!s.id || !confirm(`Delete “${s.name}”?`)) return;
-    await api.deleteSchedule(s.id);
-    onSaved();
+    try {
+      await api.deleteSchedule(s.id);
+      onSaved();
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
   };
 
   return (

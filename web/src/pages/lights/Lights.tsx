@@ -77,9 +77,13 @@ export function Lights({ devices, loaded, refresh, patterns, favorites, powerAct
           <button
             className="btn btn-ghost"
             onClick={async () => {
-              await api.release();
+              try {
+                await api.release();
+                toast('Lights handed back to WLED');
+              } catch (e) {
+                toast((e as Error).message, 'err');
+              }
               await refresh();
-              toast('Lights handed back to WLED');
             }}
           >
             Return to WLED

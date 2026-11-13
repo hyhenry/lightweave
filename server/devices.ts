@@ -97,9 +97,20 @@ export class AudioSetupError extends Error {
   }
 }
 
-/** Have `target` react to sound from `sourceId`'s microphone, or stop (null). */
-export async function setAudioSource(target: Device, sourceId: string | null): Promise<AudioMode> {
+/** Runs an audio settings change, turning controller errors into a friendly 502. */
+async function updateAudio(target: Device, change: () => Promise<void>): Promise<AudioMode> {
   try {
+    await change();
+    return await getAudio(target.host);
+  } catch (e) {
+    if (e instanceof AudioSetupError) throw e;
+    throw new AudioSetupError(`Couldn’t update ${target.name}: ${(e as Error).message}`, 502);
+  }
+}
+
+/** Have `target` react to sound from `sourceId`'s microphone, or stop (null). */
+export function setAudioSource(target: Device, sourceId: string | null): Promise<AudioMode> {
+  return updateAudio(target, async () => {
     if (sourceId) {
       const source = store.device(sourceId);
       if (!source) throw new AudioSetupError('Device not found', 404);
@@ -115,23 +126,15 @@ export async function setAudioSource(target: Device, sourceId: string | null): P
       forgetAudio(target.id, ...(source ? [source.id] : []));
       store.updateDevice(target.id, { audioSource: undefined });
     }
-    return await getAudio(target.host);
-  } catch (e) {
-    if (e instanceof AudioSetupError) throw e;
-    throw new AudioSetupError(`Couldn’t update ${target.name}: ${(e as Error).message}`, 502);
-  }
+  });
 }
 
 /** Turn a controller's own microphone on or off. */
-export async function setOwnMic(target: Device, enabled: boolean): Promise<AudioMode> {
-  try {
+export function setOwnMic(target: Device, enabled: boolean): Promise<AudioMode> {
+  return updateAudio(target, async () => {
     const mode = await getAudio(target.host);
     if (mode !== 'mic' && mode !== 'mic-off') throw new AudioSetupError(`${target.name} has no microphone`, 400);
     await setMic(target.host, enabled);
     forgetAudio(target.id);
-    return await getAudio(target.host);
-  } catch (e) {
-    if (e instanceof AudioSetupError) throw e;
-    throw new AudioSetupError(`Couldn’t update ${target.name}: ${(e as Error).message}`, 502);
-  }
+  });
 }

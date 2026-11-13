@@ -33,6 +33,7 @@ export function StripPreview({ pattern, leds, rows = 1, dot = 10, className }: P
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
+  const syncRef = useRef<() => void>(undefined);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -120,18 +121,19 @@ export function StripPreview({ pattern, leds, rows = 1, dot = 10, className }: P
       sync();
     });
     io.observe(canvas);
-    (canvas as any).__sync = sync;
+    syncRef.current = sync;
 
     return () => {
       ro.disconnect();
       io.disconnect();
       unsub?.();
+      syncRef.current = undefined;
     };
   }, [leds, rows, dot]);
 
   // Redraw / start or stop animating when the pattern changes.
   useEffect(() => {
-    (canvasRef.current as any)?.__sync?.();
+    syncRef.current?.();
   }, [pattern]);
 
   return <canvas ref={canvasRef} className={`strip ${className ?? ''}`} aria-hidden />;

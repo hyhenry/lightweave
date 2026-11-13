@@ -8,17 +8,20 @@ export function useDevices() {
   const [devices, setDevices] = useState<DeviceWithStatus[]>([]);
   const [loaded, setLoaded] = useState(false);
 
+  // Never throws: if the server can't be reached, the last list stays and the next poll tries again.
   const reload = useCallback(async () => {
     try {
       setDevices((await api.devices()).devices);
+    } catch {
+      // keep what we had
     } finally {
       setLoaded(true);
     }
   }, []);
 
   useEffect(() => {
-    reload().catch(() => {});
-    const t = setInterval(() => document.visibilityState === 'visible' && reload().catch(() => {}), POLL_MS);
+    reload();
+    const t = setInterval(() => document.visibilityState === 'visible' && reload(), POLL_MS);
     return () => clearInterval(t);
   }, [reload]);
 

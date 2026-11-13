@@ -9,9 +9,9 @@ export function playbackRoutes(app: FastifyInstance) {
   /** Show a saved pattern (patternId) or an unsaved one from the editor (pattern). */
   app.post<{ Body: { patternId?: string; pattern?: Pattern; deviceIds?: string[] } }>('/api/play', async (req, reply) => {
     const body = req.body ?? {};
-    const pattern: Pattern | undefined = body.pattern
-      ? ({ ...cleanPattern(body.pattern), id: body.pattern.id ?? 'preview' } as Pattern)
-      : store.pattern(body.patternId ?? '');
+    const unsaved = body.pattern && cleanPattern(body.pattern);
+    // A pattern that hasn't been saved yet (no id) still needs one while it's showing.
+    const pattern: Pattern | undefined = unsaved ? { ...unsaved, id: unsaved.id || 'preview' } : store.pattern(body.patternId ?? '');
     if (!pattern) return reply.code(404).send({ error: 'Pattern not found' });
     const devices = selectDevices(body.deviceIds);
     if (!devices.length) return reply.code(400).send({ error: 'Add your lights first (Lights tab)' });

@@ -130,7 +130,8 @@ export async function power(device: Device, on: boolean) {
     if (active) store.setOff(device.id, true);
     await setState(device.host, { live: false, on: false });
   } else if (active) {
-    await play(active, [device]);
+    const [result] = await play(active, [device]);
+    if (!result.ok) throw new Error(result.error);
   } else {
     await setState(device.host, { on: true });
   }

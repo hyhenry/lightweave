@@ -9,7 +9,7 @@ export interface WledInfo {
 }
 
 function baseUrl(host: string) {
-  return host.startsWith('http') ? host.replace(/\/$/, '') : `http://${host}`;
+  return /^https?:\/\//i.test(host) ? host.replace(/\/$/, '') : `http://${host}`;
 }
 
 /** Hostname without any ":port", for sending DDP to the device. */

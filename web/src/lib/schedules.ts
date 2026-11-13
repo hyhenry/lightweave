@@ -2,15 +2,13 @@
 
 import type { Pattern, Schedule } from '../../../shared/types.ts';
 import { sortCategories } from '../../../shared/holidays.ts';
-import { AUTOPILOT, LAST_USED } from '../../../shared/schedule.ts';
+import { AUTOPILOT, EVERY_DAY, LAST_USED } from '../../../shared/schedule.ts';
 import { MONTHS, daysLabel, triggerLabel } from './format.ts';
 
 export type Draft = Omit<Schedule, 'id'> & { id?: string };
 
-export const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
-
 export function newSchedule(): Draft {
-  return { name: 'Evening lights', enabled: true, patternId: AUTOPILOT, deviceIds: [], on: { kind: 'sunset', offset: 0 }, off: { kind: 'time', time: '23:00' }, days: EVERY_DAY };
+  return { name: 'Evening lights', enabled: true, patternId: AUTOPILOT, deviceIds: [], on: { kind: 'sunset', offset: 0 }, off: { kind: 'time', time: '23:00' }, days: [...EVERY_DAY] };
 }
 
 /** Needs a location for sunrise/sunset times. */

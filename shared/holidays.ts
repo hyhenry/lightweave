@@ -62,7 +62,7 @@ export const HOLIDAYS: { category: string; date: DateFn }[] = [
   { category: 'New Year’s Eve', date: fixed(12, 31) },
 ];
 
-const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+export const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /** Next time this category's holiday happens (today counts), or undefined if it isn't a holiday. */
 export function nextOccurrence(category: string, from = new Date()): Date | undefined {

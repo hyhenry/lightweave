@@ -4,6 +4,7 @@
 import type { Pattern, Schedule } from '../shared/types.ts';
 import { AUTOPILOT, LAST_USED, autopilotPattern, dueEvents, isRunning } from '../shared/schedule.ts';
 import { store } from './store.ts';
+import { selectDevices } from './devices.ts';
 import * as player from './player.ts';
 
 const TICK_MS = 20_000;
@@ -15,10 +16,7 @@ export function resolvePattern(s: Schedule, now = new Date()): Pattern | undefin
   return store.pattern(s.patternId);
 }
 
-function devicesFor(s: Schedule) {
-  const all = store.devices();
-  return s.deviceIds.length ? all.filter((d) => s.deviceIds.includes(d.id)) : all;
-}
+const devicesFor = (s: Schedule) => selectDevices(s.deviceIds);
 
 async function turnOn(s: Schedule, now: Date) {
   const devices = devicesFor(s);

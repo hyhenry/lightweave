@@ -2,6 +2,8 @@
 
 import { test, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { startMockWled, type MockOptions, type MockWled } from '../support/mock-wled.ts';
 import { eventually, freeUdpPort, startServer, wait, type TestServer } from '../support/server.ts';
 
@@ -331,4 +333,64 @@ test('rapid changes are saved, including right before shutdown', async (t) => {
   for (let b = 10; b <= 60; b += 10) await server.send('POST', '/api/brightness', { brightness: b, deviceIds: [d.id] });
   await server.kill();
   assert.equal(server.data().devices[0].brightness, 60);
+});
+
+test('turning a light back on reports it when the light can’t be reached', async (t) => {
+  const { server, mock } = await setup(t);
+  const d = await addDevice(server, mock);
+  await server.send('POST', '/api/play', { patternId: 'builtin-christmas-classic-red-green' });
+  await server.send('POST', '/api/power', { on: false });
+  await mock.close(); // unplugged while off
+  const res = await server.send<any>('POST', '/api/power', { on: true, deviceIds: [d.id] });
+  assert.equal(res.body.results[0].ok, false);
+  assert.match(res.body.results[0].error, /Couldn't reach Mock Roofline/);
+});
+
+test('removing a light takes it out of schedules and sound sharing', async (t) => {
+  const { server, mock: roof } = await setup(t, { audio: 'sync' });
+  const office = await startMockWled({ quiet: true, audio: 'mic', name: 'Office' });
+  t.after(() => office.close());
+  const r = await addDevice(server, roof);
+  const o = await addDevice(server, office);
+  await server.send('PUT', `/api/devices/${r.id}/audio`, { sourceId: o.id });
+  const onlyOffice = (await server.send<any>('POST', '/api/schedules', { name: 'Office', deviceIds: [o.id] })).body;
+  const both = (await server.send<any>('POST', '/api/schedules', { name: 'Both', deviceIds: [r.id, o.id] })).body;
+
+  await server.send('DELETE', `/api/devices/${o.id}`);
+  const { schedules } = await server.get('/api/schedules');
+  const byId = (id: string) => schedules.find((s: any) => s.id === id);
+  assert.deepEqual(byId(both.id).deviceIds, [r.id]);
+  assert.equal(byId(both.id).enabled, true);
+  assert.equal(byId(onlyOffice.id).enabled, false, 'switched off rather than widened to every light');
+
+  // Its switch in the list (which sends the schedule back as it is) can't widen it to every light...
+  for (let i = 0; i < 2; i++) {
+    const toggled = (await server.send<any>('PUT', `/api/schedules/${onlyOffice.id}`, { ...byId(onlyOffice.id), enabled: true })).body;
+    assert.equal(toggled.enabled, false);
+    assert.deepEqual(toggled.deviceIds, [o.id]);
+  }
+  // ...but picking lights in the editor brings it back.
+  const retargeted = (await server.send<any>('PUT', `/api/schedules/${onlyOffice.id}`, { ...byId(onlyOffice.id), deviceIds: [r.id], enabled: true })).body;
+  assert.equal(retargeted.enabled, true);
+  assert.deepEqual(retargeted.deviceIds, [r.id]);
+  assert.equal((await device(server, r.id)).audioSource, undefined);
+});
+
+test('an unsaved pattern from the editor plays under a preview id', async (t) => {
+  const { server, mock } = await setup(t);
+  const d = await addDevice(server, mock);
+  const pattern = { id: '', name: 'Draft', blocks: [{ color: '#FF0000', count: 1 }], animation: 'static' };
+  assert.equal((await server.send<any>('POST', '/api/play', { pattern })).body.results[0].ok, true);
+  assert.equal((await device(server, d.id)).status.playing.patternId, 'preview');
+});
+
+test('an unreadable data file is set aside instead of being overwritten', async (t) => {
+  const broken = '{"devices": [{"id": "d1", "name": "Roof"'; // cut off mid-write
+  const server = await startServer({ data: broken });
+  t.after(() => server.stop());
+  const aside = readdirSync(server.dataDir).filter((f) => f.startsWith('lightweave.json.unreadable-'));
+  assert.equal(aside.length, 1);
+  assert.equal(readFileSync(join(server.dataDir, aside[0]), 'utf8'), broken);
+  assert.deepEqual((await server.get('/api/devices')).devices, []);
+  assert.match(server.logs(), /couldn't read/);
 });

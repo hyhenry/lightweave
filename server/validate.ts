@@ -3,7 +3,7 @@
 import type { Pattern, Schedule, Settings, Trigger } from '../shared/types.ts';
 import { ANIMATIONS } from '../shared/types.ts';
 import { SOUND_EFFECT_IDS } from '../shared/sound.ts';
-import { AUTOPILOT, LAST_USED } from '../shared/schedule.ts';
+import { AUTOPILOT, EVERY_DAY, LAST_USED } from '../shared/schedule.ts';
 
 /** Thrown for bad input; Fastify turns `statusCode` into the response status. */
 export class BadRequest extends Error {
@@ -13,7 +13,8 @@ export class BadRequest extends Error {
 const clamp = (n: unknown, lo: number, hi: number, fallback: number) =>
   Number.isFinite(Number(n)) ? Math.min(hi, Math.max(lo, Number(n))) : fallback;
 
-const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+/** "HH:MM", 00:00 to 23:59. */
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function cleanPattern(body: any): Omit<Pattern, 'id'> & { id?: string } {
   if (!body || typeof body !== 'object') throw new BadRequest('Missing pattern');
@@ -46,7 +47,7 @@ export function cleanDeviceName(value: unknown) {
 }
 
 function cleanTrigger(t: any, fallback: Trigger): Trigger {
-  if (t?.kind === 'time' && /^\d{2}:\d{2}$/.test(t.time)) return { kind: 'time', time: t.time };
+  if (t?.kind === 'time' && TIME.test(t.time)) return { kind: 'time', time: t.time };
   if (t?.kind === 'sunset' || t?.kind === 'sunrise') return { kind: t.kind, offset: Math.round(clamp(t.offset, -180, 180, 0)) };
   return fallback;
 }
@@ -54,21 +55,29 @@ function cleanTrigger(t: any, fallback: Trigger): Trigger {
 /** `exists` checks pattern and device ids against what's saved. */
 export function cleanSchedule(b: any, exists: { pattern: (id: string) => boolean; device: (id: string) => boolean }): Omit<Schedule, 'id'> {
   const monthDay = (v: any): [number, number] => [Math.round(clamp(v?.[0], 1, 12, 1)), Math.round(clamp(v?.[1], 1, 31, 1))];
-  const days = Array.isArray(b?.days) ? [...new Set<number>(b.days.map(Number).filter((d: number) => d >= 0 && d <= 6))] : [];
+  const days = Array.isArray(b?.days) ? [...new Set<number>(b.days.map(Number).filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6))] : [];
   const patternId = b?.patternId;
+  const requested: string[] = (Array.isArray(b?.deviceIds) ? b.deviceIds : []).filter((id: unknown) => typeof id === 'string').slice(0, 50);
+  const known = requested.filter((id) => exists.device(id));
+  // An empty list means "all lights", so a schedule whose lights were all removed
+  // stays switched off and keeps its old ids (targeting nothing) until it's edited.
+  const orphaned = requested.length > 0 && !known.length;
+  const deviceIds = orphaned ? requested : known;
   return {
     name: String(b?.name ?? '').slice(0, 40) || 'Lights on',
-    enabled: b?.enabled !== false,
+    enabled: b?.enabled !== false && !orphaned,
     patternId: patternId === AUTOPILOT || patternId === LAST_USED || exists.pattern(patternId) ? patternId : AUTOPILOT,
-    deviceIds: Array.isArray(b?.deviceIds) ? b.deviceIds.filter((id: string) => exists.device(id)) : [],
+    deviceIds,
     on: cleanTrigger(b?.on, { kind: 'sunset', offset: 0 }),
     off: b?.off ? cleanTrigger(b.off, { kind: 'time', time: '23:00' }) : undefined,
-    days: days.length ? days.sort() : EVERY_DAY,
+    days: days.length ? days.sort((x, y) => x - y) : [...EVERY_DAY],
     season: b?.season ? { from: monthDay(b.season.from), to: monthDay(b.season.to) } : undefined,
   };
 }
 
 export function cleanLocation(loc: any): Settings['location'] {
-  if (!loc || !Number.isFinite(Number(loc.lat)) || !Number.isFinite(Number(loc.lon))) return undefined;
-  return { name: String(loc.name).slice(0, 60), lat: Number(loc.lat), lon: Number(loc.lon) };
+  const lat = Number(loc?.lat);
+  const lon = Number(loc?.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return undefined;
+  return { name: String(loc.name ?? '').slice(0, 60) || 'My location', lat, lon };
 }

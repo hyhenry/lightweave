@@ -2,13 +2,15 @@
 // "Holiday autopilot" picks. Pure, so the server and the app agree.
 
 import type { Pattern, Schedule, Settings, Trigger } from './types.ts';
-import { daysUntil } from './holidays.ts';
+import { daysUntil, startOfDay } from './holidays.ts';
 import { sunTime } from './sun.ts';
 
 export const AUTOPILOT = 'autopilot';
 /** Each light turns on with whatever it showed last. */
 export const LAST_USED = 'last';
 const FALLBACK_THEME = 'builtin-everyday-warm-white';
+/** 0 = Sunday … 6 = Saturday. */
+export const EVERY_DAY: readonly number[] = [0, 1, 2, 3, 4, 5, 6];
 
 /** How many days ahead autopilot switches to a holiday's theme. */
 const LEAD_DAYS: Record<string, number> = { Christmas: 30, Halloween: 21, Hanukkah: 8 };
@@ -17,7 +19,6 @@ const NOT_AUTOPILOT = new Set(['Winter']); // a season, not a holiday
 /** Holidays not every household marks: autopilot only uses them once one of their themes is a favorite. */
 const OPT_IN = new Set(['Hanukkah']);
 
-const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
 /** The theme autopilot would show on this date: favorite for the nearest holiday, else its first theme. */
@@ -62,13 +63,13 @@ export function runsOn(s: Schedule, day: Date): boolean {
   return s.days.includes(day.getDay()) && inSeason(s, day);
 }
 
-export interface Window {
+export interface RunWindow {
   on?: Date;
   off?: Date;
 }
 
 /** The on/off times for the schedule run that starts on `day`. An off time before the on time means the next morning. */
-export function windowFor(s: Schedule, day: Date, settings: Settings): Window | undefined {
+export function windowFor(s: Schedule, day: Date, settings: Settings): RunWindow | undefined {
   if (!runsOn(s, day)) return undefined;
   const on = triggerTime(s.on, day, settings);
   if (!on) return undefined;
@@ -78,9 +79,9 @@ export function windowFor(s: Schedule, day: Date, settings: Settings): Window | 
 }
 
 /** Recent and upcoming runs around `now` (yesterday's might still be running after midnight). */
-export function windowsAround(s: Schedule, now: Date, settings: Settings, daysAhead = 0): Window[] {
+export function windowsAround(s: Schedule, now: Date, settings: Settings, daysAhead = 0): RunWindow[] {
   const today = startOfDay(now);
-  const out: Window[] = [];
+  const out: RunWindow[] = [];
   for (let i = -1; i <= daysAhead; i++) {
     const w = windowFor(s, addDays(today, i), settings);
     if (w) out.push(w);

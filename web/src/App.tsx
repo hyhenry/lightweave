@@ -14,7 +14,7 @@ import { MyPatterns } from './pages/MyPatterns.tsx';
 import { Editor } from './pages/editor/Editor.tsx';
 import { Lights } from './pages/lights/Lights.tsx';
 
-type Tab ='favorites' | 'themes' | 'mine' | 'lights';
+type Tab = 'favorites' | 'themes' | 'mine' | 'lights';
 
 const TABS: [Tab, string, string][] = [
   ['favorites', '⭐', 'Favorites'],
@@ -62,12 +62,16 @@ export function App() {
   };
 
   const save = async (p: Pattern) => {
-    const saved = p.id && !p.builtIn ? await api.updatePattern(p.id, p) : await api.createPattern(p);
-    await library.reload();
-    setEditing(null);
-    setSelected(null);
-    setTab('mine');
-    toast(`Saved “${saved.name}”`);
+    try {
+      const saved = p.id && !p.builtIn ? await api.updatePattern(p.id, p) : await api.createPattern(p);
+      await library.reload();
+      setEditing(null);
+      setSelected(null);
+      setTab('mine');
+      toast(`Saved “${saved.name}”`);
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
   };
 
   const remove = async (p: Pattern) => {
@@ -84,7 +88,12 @@ export function App() {
   };
 
   const setAllPower = async () => {
-    await api.power(!anyOn).catch((e) => toast(e.message, 'err'));
+    try {
+      const failed = (await api.power(!anyOn)).results.filter((r) => !r.ok);
+      if (failed.length) toast(failed.map((f) => f.error).join('\n'), 'err');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
     reloadDevices();
   };
 

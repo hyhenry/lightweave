@@ -31,6 +31,7 @@ test('lists WLED controllers from Home Assistant, marking ones already added', a
     ha.wled = [
       { name: 'Roofline', url: `http://${roof.host}` },
       { name: 'Porch', url: 'http://10.9.9.9' },
+      { name: 'Broken', url: 'not an address' }, // skipped, without losing the others
     ];
   });
   assert.deepEqual(await server.get('/api/info'), { homeAssistant: true });

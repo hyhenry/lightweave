@@ -4,13 +4,13 @@ import { useThrottledSend } from '../hooks/useThrottledSend.ts';
 import { useToast } from './ui.tsx';
 import { StripPreview } from './StripPreview.tsx';
 
+/** Give up waiting for the controller to report a switch and show what it says instead. */
+const SETTLE_MS = 5000;
+
 /**
  * One controller's card: what it's showing, a live preview, its own power switch
  * and brightness. When it's off, just its name and a switch to turn it back on.
  */
-/** Give up waiting for the controller to report a switch and show what it says instead. */
-const SETTLE_MS = 5000;
-
 export function NowShowing({ device, onChanged }: { device: DeviceWithStatus; onChanged: () => Promise<unknown> | void }) {
   const toast = useToast();
   const { status } = device;

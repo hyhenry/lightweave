@@ -42,9 +42,9 @@ export async function wledFromHomeAssistant(): Promise<HaWled[]> {
   try {
     const found = JSON.parse(await core('/template', { template: WLED_TEMPLATE })) as { name?: string; url?: string }[];
     return found.flatMap((d) => {
-      if (!d.url) return [];
-      const host = new URL(d.url).host;
-      return [{ name: d.name || host, host }];
+      // Skip a device without a usable address rather than losing the whole list.
+      const host = URL.parse(d.url ?? '')?.host;
+      return host ? [{ name: d.name || host, host }] : [];
     });
   } catch (e) {
     if (!warned) console.warn(`[home assistant] couldn't list WLED devices: ${(e as Error).message}`);
