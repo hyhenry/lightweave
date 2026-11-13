@@ -105,7 +105,7 @@ h1, h2, h3 { margin: 0; }
   background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
   font-size: 16px; /* prevents iOS zoom-on-focus */
 }
-.input::placeholder { color: #6b7288; }
+.input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
 .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
 .center { text-align: center; }
 .pad { padding: 32px 0; }

@@ -6,6 +6,7 @@ import { clock, daysLabel, holidayWhenLabel, hostLabel, nextRunLabel, offsetLabe
 import { groupCategories } from '../../web/src/lib/gallery.ts';
 import { editableCopy, motionLabel, newPattern } from '../../web/src/lib/patterns.ts';
 import { newSchedule, patternChoices, scheduleSummary, showingLabel, usesSun } from '../../web/src/lib/schedules.ts';
+import { luminance, mapHaTheme } from '../../web/src/lib/haTheme.ts';
 import { BUILT_IN_THEMES } from '../../shared/themes.ts';
 import type { Schedule } from '../../shared/types.ts';
 
@@ -71,4 +72,38 @@ test('schedule helpers', () => {
   const groups = patternChoices(BUILT_IN_THEMES, ['builtin-halloween-witchy']);
   assert.deepEqual(groups[0][1].map((p) => p.name), ['Witchy']);
   assert.ok(!groups.some(([label]) => label === 'My Patterns'), 'empty groups are dropped');
+});
+
+test('Home Assistant theme colors map onto Lightweave tokens', () => {
+  const lookup = (vars: Record<string, string>) => (name: string) => vars[name] ?? '';
+  // Not inside Home Assistant: keep the built-in palette.
+  assert.equal(mapHaTheme(lookup({})), null);
+
+  const light = mapHaTheme(lookup({
+    '--primary-background-color': ' #fafafa',
+    '--card-background-color': '#ffffff',
+    '--secondary-background-color': '#e5e5e5',
+    '--divider-color': 'rgba(0, 0, 0, .12)',
+    '--primary-text-color': '#212121',
+    '--secondary-text-color': '#727272',
+    '--primary-color': '#03a9f4',
+    '--text-primary-color': '#ffffff',
+    '--error-color': '#db4437',
+    '--success-color': '#43a047',
+  }));
+  assert.deepEqual(light, {
+    '--bg': '#fafafa', '--surface': '#ffffff', '--surface-2': '#e5e5e5', '--line': 'rgba(0, 0, 0, .12)',
+    '--text': '#212121', '--muted': '#727272', '--accent': '#03a9f4', '--accent-ink': '#ffffff',
+    '--danger': '#db4437', '--ok': '#43a047',
+  });
+
+  // A community theme that sets only some variables: the rest keep their defaults.
+  const partial = mapHaTheme(lookup({ '--primary-background-color': '#111', '--ha-card-background': '#222', '--card-background-color': '#333' }));
+  assert.deepEqual(partial, { '--bg': '#111', '--surface': '#222' });
+});
+
+test('luminance tells light backgrounds from dark ones', () => {
+  assert.ok(luminance('rgb(250, 250, 250)')! > 0.9);
+  assert.ok(luminance('rgba(17, 17, 17, 1)')! < 0.05);
+  assert.equal(luminance('#fff'), null);
 });
