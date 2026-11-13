@@ -67,7 +67,9 @@ function apply(source: Element): void {
   const root = document.documentElement;
   for (const token of APPLIED) root.style.removeProperty(token);
   root.style.removeProperty('color-scheme');
+  root.removeAttribute('data-ha-theme');
   if (!tokens) return;
+  root.setAttribute('data-ha-theme', '');
   for (const [token, value] of Object.entries(tokens)) root.style.setProperty(token, value);
 
   // Light or dark form controls, from how bright the theme's background really is.
@@ -84,6 +86,7 @@ function apply(source: Element): void {
 export function followHomeAssistantTheme(): void {
   const source = parentThemeElement();
   if (!source) return;
+  document.documentElement.setAttribute('data-ha-embedded', '');
   const refresh = () => {
     try {
       apply(source);
