@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6
+
+- Inside Home Assistant, Lightweave uses Home Assistant's own fonts and text sizes, so it looks at home there and fits more on screen.
+- Inside Home Assistant, the Lightweave title bar is gone. The All on/off button is now on the Lights tab, next to Controllers.
+
 ## 0.2.5
 
 - Switches that are off are visible again with Home Assistant themes.
