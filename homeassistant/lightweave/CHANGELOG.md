@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Switches that are off are visible again with Home Assistant themes.
+- On phones, the bottom bar inside Home Assistant no longer has an extra gap beneath it.
+
 ## 0.2.4
 
 - Inside Home Assistant, Lightweave now uses the colors of your active Home Assistant theme, light or dark, and follows it when you switch. Opened outside Home Assistant, it keeps its own colors.
