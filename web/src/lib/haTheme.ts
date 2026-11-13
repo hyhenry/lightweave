@@ -51,6 +51,64 @@ export function luminance(rgb: string): number | null {
 
 const APPLIED = Object.keys(HA_TOKEN_MAP);
 
+/** Home Assistant's typography variables, copied as-is; styles.css maps them onto Lightweave's type tokens. */
+export const HA_TYPOGRAPHY_VARS = [
+  '--ha-font-family-body',
+  '--ha-font-size-xs',
+  '--ha-font-size-s',
+  '--ha-font-size-m',
+  '--ha-font-size-l',
+  '--ha-font-size-xl',
+  '--ha-font-weight-body',
+  '--ha-font-weight-medium',
+  '--ha-font-weight-action',
+  '--ha-font-weight-heading',
+];
+
+/** Home Assistant ships Roboto itself; these are used when its @font-face rules can't be copied. */
+const ROBOTO_FALLBACK = [
+  [400, 'Regular'],
+  [500, 'Medium'],
+  [700, 'Bold'],
+]
+  .map(
+    ([weight, file]) =>
+      `@font-face{font-family:"Roboto";font-display:swap;font-weight:${weight};font-style:normal;` +
+      `src:local("Roboto ${file}"),local("Roboto-${file}"),url(/static/fonts/roboto/Roboto-${file}.woff2) format("woff2")}`,
+  )
+  .join('\n');
+
+/**
+ * Web fonts don't carry into an iframe, so copy Home Assistant's @font-face rules
+ * (Roboto, or a theme's own font) into this page. Their URLs are on the same origin.
+ */
+function adoptParentFonts(doc: Document): void {
+  const rules: string[] = [];
+  const sheets = [...Array.from(doc.styleSheets), ...(doc.adoptedStyleSheets ?? [])];
+  for (const sheet of sheets) {
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        if (rule instanceof (doc.defaultView?.CSSFontFaceRule ?? CSSFontFaceRule)) rules.push(rule.cssText);
+      }
+    } catch {
+      // A cross-origin stylesheet; its rules can't be read.
+    }
+  }
+  const style = document.createElement('style');
+  style.dataset.haFonts = '';
+  style.textContent = rules.some((r) => /roboto/i.test(r)) ? rules.join('\n') : `${rules.join('\n')}\n${ROBOTO_FALLBACK}`;
+  document.head.appendChild(style);
+}
+
+function applyTypography(style: CSSStyleDeclaration): void {
+  const root = document.documentElement;
+  for (const name of HA_TYPOGRAPHY_VARS) {
+    const value = style.getPropertyValue(name).trim();
+    if (value) root.style.setProperty(name, value);
+    else root.style.removeProperty(name);
+  }
+}
+
 function parentThemeElement(): Element | null {
   try {
     if (window.parent === window) return null;
@@ -63,6 +121,7 @@ function parentThemeElement(): Element | null {
 
 function apply(source: Element): void {
   const style = getComputedStyle(source);
+  applyTypography(style);
   const tokens = mapHaTheme((name) => style.getPropertyValue(name));
   const root = document.documentElement;
   for (const token of APPLIED) root.style.removeProperty(token);
@@ -87,6 +146,11 @@ export function followHomeAssistantTheme(): void {
   const source = parentThemeElement();
   if (!source) return;
   document.documentElement.setAttribute('data-ha-embedded', '');
+  try {
+    adoptParentFonts(source.ownerDocument);
+  } catch {
+    // Fonts fall back to the system font.
+  }
   const refresh = () => {
     try {
       apply(source);

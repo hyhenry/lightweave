@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Pattern } from '../../../../shared/types.ts';
 import { api, type DeviceWithStatus } from '../../api.ts';
 import { useToast } from '../../components/ui.tsx';
@@ -14,10 +14,12 @@ interface Props {
   refresh: () => Promise<void>;
   patterns: Pattern[];
   favorites: string[];
+  /** The "All on/off" button, shown here when there's no title bar to hold it (inside Home Assistant). */
+  powerAction?: ReactNode;
 }
 
 /** Setup: controllers and schedules. Turning lights on/off lives in the cards at the top. */
-export function Lights({ devices, loaded, refresh, patterns, favorites }: Props) {
+export function Lights({ devices, loaded, refresh, patterns, favorites, powerAction }: Props) {
   const toast = useToast();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<DeviceWithStatus | null>(null);
@@ -38,7 +40,10 @@ export function Lights({ devices, loaded, refresh, patterns, favorites }: Props)
 
       {devices.length > 0 && (
         <>
-          <h2 className="section-title">Controllers</h2>
+          <h2 className="section-title">
+            Controllers
+            {powerAction}
+          </h2>
           <ul className="device-list">
             {devices.map((d) => (
               <li key={d.id} className="device">
